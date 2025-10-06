@@ -49,6 +49,28 @@ router.get('/', auth, roleCheck(['mentor']), async (req, res) => {
     }
 });
 
+// @route   GET /api/groups/mentee
+// @desc    Get all groups that mentee belongs to
+// @access  Private (Mentee only)
+router.get('/mentee', auth, roleCheck(['mentee']), async (req, res) => {
+    try {
+        const mentee = await Mentee.findOne({ userId: req.user._id });
+        if (!mentee) {
+            return res.status(404).json({ message: 'Mentee profile not found' });
+        }
+
+        const groups = await Group.find({
+            menteeIds: mentee._id,
+            isArchived: false
+        }).populate('mentorId', 'fullName department');
+
+        res.json(groups);
+    } catch (error) {
+        console.error('Error fetching mentee groups:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // @route   GET /api/groups/:id
 // @desc    Get group details
 // @access  Private
@@ -62,8 +84,22 @@ router.get('/:id', auth, async (req, res) => {
             return res.status(404).json({ message: 'Group not found' });
         }
 
+        // Check if user has access to this group
+        if (req.user.role === 'mentee') {
+            const mentee = await Mentee.findOne({ userId: req.user._id });
+            if (!mentee || !group.menteeIds.some(id => id._id.toString() === mentee._id.toString())) {
+                return res.status(403).json({ message: 'Access denied' });
+            }
+        } else if (req.user.role === 'mentor') {
+            const mentor = await Mentor.findOne({ userId: req.user._id });
+            if (!mentor || group.mentorId._id.toString() !== mentor._id.toString()) {
+                return res.status(403).json({ message: 'Access denied' });
+            }
+        }
+
         res.json(group);
     } catch (error) {
+        console.error('Error fetching group details:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

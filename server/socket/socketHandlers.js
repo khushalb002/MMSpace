@@ -41,6 +41,34 @@ module.exports = (io) => {
             console.log(`User ${socket.userId} left group ${groupId}`);
         });
 
+        // Auto-join mentees to their groups
+        if (socket.userRole === 'mentee') {
+            const Group = require('../models/Group');
+            const Mentee = require('../models/Mentee');
+
+            console.log(`Auto-joining mentee ${socket.userId} to their groups...`);
+
+            // Find mentee and their groups
+            Mentee.findOne({ userId: socket.userId })
+                .then(mentee => {
+                    console.log(`Found mentee:`, mentee?._id);
+                    if (mentee) {
+                        return Group.find({ menteeIds: mentee._id });
+                    }
+                    return [];
+                })
+                .then(groups => {
+                    console.log(`Found ${groups.length} groups for mentee ${socket.userId}`);
+                    groups.forEach(group => {
+                        socket.join(group._id.toString());
+                        console.log(`Mentee ${socket.userId} auto-joined group ${group._id} (${group.name})`);
+                    });
+                })
+                .catch(err => {
+                    console.error('Error auto-joining mentee to groups:', err);
+                });
+        }
+
         // Handle typing indicators
         socket.on('typing', (data) => {
             socket.to(data.conversationId).emit('userTyping', {

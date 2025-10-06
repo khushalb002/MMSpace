@@ -49,6 +49,26 @@ const announcementSchema = new mongoose.Schema({
         mimetype: String,
         size: Number,
         url: String
+    }],
+    comments: [{
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        userRole: {
+            type: String,
+            enum: ['admin', 'mentor', 'mentee'],
+            required: true
+        },
+        content: {
+            type: String,
+            required: true
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
     }]
 }, {
     timestamps: true

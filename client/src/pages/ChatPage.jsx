@@ -8,6 +8,8 @@ import api from '../services/api'
 import { Send, Paperclip, MessageSquare, Megaphone, X, Plus, Image, FileText, Smile, MoreVertical } from 'lucide-react'
 import GroupIcon from '../components/icons/GroupIcon'
 import UserIcon from '../components/icons/UserIcon'
+import MenteeSelectionModal from '../components/MenteeSelectionModal'
+import AnnouncementFeed from '../components/AnnouncementFeed'
 import { toast } from 'react-hot-toast'
 
 const ModernChatPage = () => {
@@ -24,6 +26,8 @@ const ModernChatPage = () => {
     const [conversationType, setConversationType] = useState('group')
     const [activeTab, setActiveTab] = useState('chats') // 'chats' or 'announcements'
     const [showCreateChat, setShowCreateChat] = useState(false)
+    const [showMenteeSelection, setShowMenteeSelection] = useState(false)
+    const [showChatMenu, setShowChatMenu] = useState(false)
     const [showAttachMenu, setShowAttachMenu] = useState(false)
     const [isTyping, setIsTyping] = useState(false)
     const messagesEndRef = useRef(null)
@@ -68,6 +72,20 @@ const ModernChatPage = () => {
         scrollToBottom()
     }, [messages])
 
+    // Close chat menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (showChatMenu && !event.target.closest('.chat-menu')) {
+                setShowChatMenu(false)
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [showChatMenu])
+
     const fetchConversations = async () => {
         try {
             let conversationList = []
@@ -99,18 +117,37 @@ const ModernChatPage = () => {
                 conversationList = [...conversationList, ...individualChats]
 
             } else {
-                // For mentees, show chat with their mentor
+                // For mentees, show groups they belong to and chat with their mentor
+                try {
+                    console.log('Fetching groups for mentee...')
+                    // Fetch groups that the mentee belongs to
+                    const groupsResponse = await api.get('/groups/mentee')
+                    console.log('Mentee groups response:', groupsResponse.data)
+                    const groups = groupsResponse.data.map(group => ({
+                        ...group,
+                        type: 'group',
+                        displayName: group.name,
+                        subtitle: `${group.menteeIds?.length || 0} members`
+                    }))
+                    conversationList = [...groups]
+                    console.log('Processed groups for mentee:', conversationList)
+                } catch (error) {
+                    console.error('Error fetching mentee groups:', error)
+                    console.error('Error details:', error.response?.data)
+                }
+
+                // Add individual chat with mentor
                 if (profile?.mentorId) {
                     const mentorId = profile.mentorId._id || profile.mentorId
                     const conversationId = `individual_${profile._id}`
-                    conversationList = [{
+                    conversationList.push({
                         _id: conversationId,
                         type: 'individual',
                         displayName: profile.mentorId.fullName || 'Your Mentor',
                         subtitle: profile.mentorId.department || 'Mentor',
                         mentorId: mentorId,
                         color: '#3B82F6'
-                    }]
+                    })
                 }
             }
 
@@ -189,10 +226,33 @@ const ModernChatPage = () => {
     }
 
     const handleNewMessage = (message) => {
+        console.log('Received new message:', message)
+        console.log('Current selected conversation:', selectedConversation?._id)
+        console.log('Message conversation ID:', message.conversationId)
+
+        // Only add message if it belongs to the current conversation
+        if (selectedConversation) {
+            let shouldAddMessage = false
+
+            if (selectedConversation.type === 'group') {
+                shouldAddMessage = message.conversationId === selectedConversation._id
+            } else {
+                // For individual chats, check if the message belongs to this conversation
+                const actualConversationId = selectedConversation._id.replace('individual_', '')
+                shouldAddMessage = message.conversationId === actualConversationId
+            }
+
+            if (!shouldAddMessage) {
+                console.log('Message does not belong to current conversation, skipping')
+                return
+            }
+        }
+
         setMessages(prev => {
             // Check if message already exists to prevent duplicates
             const messageExists = prev.some(msg => msg._id === message._id)
             if (messageExists) {
+                console.log('Message already exists, skipping')
                 return prev
             }
 
@@ -209,9 +269,11 @@ const ModernChatPage = () => {
                 // Replace optimistic message with real message
                 const newMessages = [...prev]
                 newMessages[optimisticIndex] = message
+                console.log('Replaced optimistic message with real message')
                 return newMessages
             }
 
+            console.log('Adding new message to chat')
             return [...prev, message]
         })
     }
@@ -283,6 +345,53 @@ const ModernChatPage = () => {
         }
     }
 
+    const handleSelectMentee = (conversation) => {
+        // Add the new conversation to the list if it doesn't exist
+        setConversations(prev => {
+            const exists = prev.find(c => c._id === conversation._id)
+            if (exists) {
+                return prev
+            }
+            return [...prev, conversation]
+        })
+
+        // Select the conversation
+        setSelectedConversation(conversation)
+        setConversationType(conversation.type)
+        setShowMenteeSelection(false)
+
+        // Update URL
+        window.history.pushState(null, '', `/chat/${conversation._id}`)
+    }
+
+    const handleCloseChat = () => {
+        if (selectedConversation) {
+            // Only remove individual chats from the sidebar, keep groups
+            if (selectedConversation.type === 'individual' && selectedConversation._id.startsWith('individual_')) {
+                // Only remove if it's a dynamically created individual chat (not the default mentor chat for mentees)
+                if (user.role === 'mentor') {
+                    setConversations(prev => prev.filter(conv => conv._id !== selectedConversation._id))
+                }
+            }
+
+            // Leave the socket room
+            if (socket) {
+                if (selectedConversation.type === 'individual') {
+                    const actualId = selectedConversation._id.replace('individual_', '')
+                    socket.emit('leaveGroup', actualId)
+                } else {
+                    // Don't leave group rooms permanently, just stop listening to this specific group
+                    socket.emit('leaveGroup', selectedConversation._id)
+                }
+            }
+        }
+
+        setSelectedConversation(null)
+        setMessages([])
+        setShowChatMenu(false)
+        window.history.pushState(null, '', '/chat')
+    }
+
     if (loading) {
         return (
             <Layout>
@@ -306,8 +415,9 @@ const ModernChatPage = () => {
                             </h1>
                             {user.role === 'mentor' && (
                                 <button
-                                    onClick={() => setShowCreateChat(true)}
+                                    onClick={() => setShowMenteeSelection(true)}
                                     className="p-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg hover:shadow-xl transform hover:scale-110 transition-all duration-300"
+                                    title="Start new chat"
                                 >
                                     <Plus className="h-4 w-4" />
                                 </button>
@@ -326,18 +436,16 @@ const ModernChatPage = () => {
                                 <MessageSquare className="h-4 w-4 mr-2" />
                                 Chats
                             </button>
-                            {user.role === 'mentor' && (
-                                <button
-                                    onClick={() => setActiveTab('announcements')}
-                                    className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${activeTab === 'announcements'
-                                        ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg transform scale-105'
-                                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
-                                        }`}
-                                >
-                                    <Megaphone className="h-4 w-4 mr-2" />
-                                    Announcements
-                                </button>
-                            )}
+                            <button
+                                onClick={() => setActiveTab('announcements')}
+                                className={`flex-1 flex items-center justify-center px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${activeTab === 'announcements'
+                                    ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg transform scale-105'
+                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                                    }`}
+                            >
+                                <Megaphone className="h-4 w-4 mr-2" />
+                                Announcements
+                            </button>
                         </div>
                     </div>
 
@@ -398,75 +506,80 @@ const ModernChatPage = () => {
                             </div>
                         ) : (
                             <div className="p-4">
-                                <div className="space-y-4">
-                                    {/* Announcement Input */}
-                                    <div className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4">
-                                        <h3 className="font-semibold text-slate-800 dark:text-white mb-3">
-                                            Create Announcement
-                                        </h3>
-                                        <textarea
-                                            value={newAnnouncement}
-                                            onChange={(e) => setNewAnnouncement(e.target.value)}
-                                            placeholder="Type your announcement..."
-                                            className="w-full bg-white/50 dark:bg-slate-600/50 border border-white/20 dark:border-slate-600/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 resize-none"
-                                            rows="3"
-                                        />
-                                        <button
-                                            onClick={sendAnnouncement}
-                                            disabled={!newAnnouncement.trim()}
-                                            className="mt-3 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all duration-300"
-                                        >
-                                            Send Announcement
-                                        </button>
-                                    </div>
+                                {user.role === 'mentor' ? (
+                                    <div className="space-y-4">
+                                        {/* Announcement Input */}
+                                        <div className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4">
+                                            <h3 className="font-semibold text-slate-800 dark:text-white mb-3">
+                                                Create Announcement
+                                            </h3>
+                                            <textarea
+                                                value={newAnnouncement}
+                                                onChange={(e) => setNewAnnouncement(e.target.value)}
+                                                placeholder="Type your announcement..."
+                                                className="w-full bg-white/50 dark:bg-slate-600/50 border border-white/20 dark:border-slate-600/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 resize-none"
+                                                rows="3"
+                                            />
+                                            <button
+                                                onClick={sendAnnouncement}
+                                                disabled={!newAnnouncement.trim()}
+                                                className="mt-3 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all duration-300"
+                                            >
+                                                Send Announcement
+                                            </button>
+                                        </div>
 
-                                    {/* Recent Announcements */}
-                                    <div className="space-y-3">
-                                        <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 px-2">
-                                            Recent Announcements
-                                        </h3>
-                                        {announcements.length > 0 ? (
-                                            announcements.map((announcement, index) => (
-                                                <div
-                                                    key={announcement._id}
-                                                    className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4 border border-white/20 dark:border-slate-600/30 hover:shadow-lg transition-all duration-300"
-                                                    style={{ animationDelay: `${index * 0.1}s` }}
-                                                >
-                                                    <div className="flex items-start space-x-3">
-                                                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold shadow-lg">
-                                                            📢
+                                        {/* Recent Announcements */}
+                                        <div className="space-y-3">
+                                            <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 px-2">
+                                                Recent Announcements
+                                            </h3>
+                                            {announcements.length > 0 ? (
+                                                announcements.map((announcement, index) => (
+                                                    <div
+                                                        key={announcement._id}
+                                                        className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4 border border-white/20 dark:border-slate-600/30 hover:shadow-lg transition-all duration-300"
+                                                        style={{ animationDelay: `${index * 0.1}s` }}
+                                                    >
+                                                        <div className="flex items-start space-x-3">
+                                                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold shadow-lg">
+                                                                📢
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <h4 className="font-semibold text-slate-800 dark:text-white text-sm">
+                                                                    {announcement.title}
+                                                                </h4>
+                                                                <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
+                                                                    {announcement.content}
+                                                                </p>
+                                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                                                                    {new Date(announcement.createdAt).toLocaleDateString()}
+                                                                </p>
+                                                            </div>
+                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${announcement.priority === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                                announcement.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
+                                                                    announcement.priority === 'medium' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                                                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                                                                }`}>
+                                                                {announcement.priority}
+                                                            </span>
                                                         </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h4 className="font-semibold text-slate-800 dark:text-white text-sm">
-                                                                {announcement.title}
-                                                            </h4>
-                                                            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
-                                                                {announcement.content}
-                                                            </p>
-                                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                                                                {new Date(announcement.createdAt).toLocaleDateString()}
-                                                            </p>
-                                                        </div>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${announcement.priority === 'urgent' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
-                                                            announcement.priority === 'high' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200' :
-                                                                announcement.priority === 'medium' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                                                                    'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
-                                                            }`}>
-                                                            {announcement.priority}
-                                                        </span>
                                                     </div>
+                                                ))
+                                            ) : (
+                                                <div className="text-center py-8">
+                                                    <Megaphone className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                                                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                                                        No announcements yet
+                                                    </p>
                                                 </div>
-                                            ))
-                                        ) : (
-                                            <div className="text-center py-8">
-                                                <Megaphone className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                                                <p className="text-sm text-slate-500 dark:text-slate-400">
-                                                    No announcements yet
-                                                </p>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    /* Announcement Feed for Mentees */
+                                    <AnnouncementFeed />
+                                )}
                             </div>
                         )}
                     </div>
@@ -498,9 +611,27 @@ const ModernChatPage = () => {
                                             </p>
                                         </div>
                                     </div>
-                                    <button className="p-2 rounded-full bg-slate-100/50 dark:bg-slate-700/50 hover:bg-slate-200/50 dark:hover:bg-slate-600/50 transition-colors duration-200">
-                                        <MoreVertical className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                                    </button>
+                                    <div className="relative chat-menu">
+                                        <button
+                                            onClick={() => setShowChatMenu(!showChatMenu)}
+                                            className="p-2 rounded-full bg-slate-100/50 dark:bg-slate-700/50 hover:bg-slate-200/50 dark:hover:bg-slate-600/50 transition-colors duration-200"
+                                        >
+                                            <MoreVertical className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                                        </button>
+
+                                        {/* Dropdown Menu */}
+                                        {showChatMenu && (
+                                            <div className="absolute right-0 top-full mt-2 w-48 bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-slate-700/50 py-2 z-50">
+                                                <button
+                                                    onClick={handleCloseChat}
+                                                    className="w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100/50 dark:hover:bg-slate-700/50 transition-colors duration-200 flex items-center space-x-2"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                    <span>Close Chat</span>
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -664,6 +795,13 @@ const ModernChatPage = () => {
                     </div>
                 )}
             </div>
+
+            {/* Mentee Selection Modal */}
+            <MenteeSelectionModal
+                isOpen={showMenteeSelection}
+                onClose={() => setShowMenteeSelection(false)}
+                onSelectMentee={handleSelectMentee}
+            />
         </Layout>
     )
 }

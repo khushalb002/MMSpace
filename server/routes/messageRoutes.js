@@ -28,8 +28,20 @@ router.post('/', auth, async (req, res) => {
 
         // Emit socket event for real-time messaging
         if (conversationType === 'group') {
-            // For group messages, only emit to the group room
-            req.io.to(conversationId.toString()).emit('newMessage', message);
+            // For group messages, emit to all group members
+            const group = await Group.findById(conversationId).populate('menteeIds', '_id');
+            if (group) {
+                // Emit to group room
+                req.io.to(conversationId.toString()).emit('newMessage', message);
+
+                // Also emit to each mentee's personal room for notifications
+                group.menteeIds.forEach(mentee => {
+                    req.io.to(mentee._id.toString()).emit('newMessage', message);
+                });
+
+                // Emit to mentor's personal room
+                req.io.to(group.mentorId.toString()).emit('newMessage', message);
+            }
         } else {
             // For individual chats, emit to both users' individual rooms
             req.io.to(conversationId.toString()).emit('newMessage', message);

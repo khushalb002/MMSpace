@@ -27,11 +27,17 @@ const LeavesPage = () => {
             const response = await api.get(`${endpoint}${params}`)
             setLeaves(response.data)
         } catch (error) {
+            console.error('Error fetching leaves:', error)
             toast.error('Failed to fetch leave requests')
         } finally {
             setLoading(false)
         }
     }
+
+    // Filter leaves on the frontend as well for better UX
+    const filteredLeaves = filter === 'all'
+        ? leaves
+        : leaves.filter(leave => leave.status === filter)
 
     const handleCreateLeave = async (data) => {
         try {
@@ -157,7 +163,7 @@ const LeavesPage = () => {
 
                 {/* Leave Requests List */}
                 <div className="space-y-4">
-                    {leaves.map((leave, index) => (
+                    {filteredLeaves.map((leave, index) => (
                         <div
                             key={leave._id}
                             className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-3xl border border-white/20 dark:border-slate-700/50 p-6 hover:shadow-xl transition-all duration-300 message-bubble"
@@ -223,7 +229,7 @@ const LeavesPage = () => {
                     ))}
                 </div>
 
-                {leaves.length === 0 && (
+                {filteredLeaves.length === 0 && (
                     <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-12">
                         <div className="text-center">
                             <div className="h-24 w-24 bg-gradient-to-br from-slate-400 to-slate-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
