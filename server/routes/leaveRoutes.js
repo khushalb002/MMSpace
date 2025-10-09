@@ -129,8 +129,8 @@ router.get('/mentor', auth, roleCheck(['mentor']), async (req, res) => {
 
 // @route   PUT /api/leaves/:id/approve
 // @desc    Approve leave request
-// @access  Private (Mentor only)
-router.put('/:id/approve', auth, roleCheck(['mentor']), async (req, res) => {
+// @access  Private (Mentor/Admin)
+router.put('/:id/approve', auth, roleCheck(['mentor', 'admin']), async (req, res) => {
     try {
         const { mentorComments } = req.body;
 
@@ -169,8 +169,8 @@ router.put('/:id/approve', auth, roleCheck(['mentor']), async (req, res) => {
 
 // @route   PUT /api/leaves/:id/reject
 // @desc    Reject leave request
-// @access  Private (Mentor only)
-router.put('/:id/reject', auth, roleCheck(['mentor']), async (req, res) => {
+// @access  Private (Mentor/Admin)
+router.put('/:id/reject', auth, roleCheck(['mentor', 'admin']), async (req, res) => {
     try {
         const { mentorComments } = req.body;
 
@@ -204,6 +204,37 @@ router.put('/:id/reject', auth, roleCheck(['mentor']), async (req, res) => {
     } catch (error) {
         console.error('Error rejecting leave request:', error);
         res.status(500).json({ message: 'Failed to reject leave request' });
+    }
+});
+
+// @route   GET /api/leaves/admin
+// @desc    Get all leave requests (Admin only)
+// @access  Private (Admin only)
+router.get('/admin', auth, roleCheck(['admin']), async (req, res) => {
+    try {
+        console.log('Fetching all leave requests for admin user:', req.user._id);
+
+        const { status } = req.query;
+        let query = {};
+
+        if (status && status !== 'all') {
+            query.status = status;
+        }
+
+        // Manually populate with specific fields
+        const populatedLeaves = await executeWithRetry(async () => {
+            return LeaveRequest.find(query)
+                .populate('menteeId', 'fullName studentId class section')
+                .populate('mentorId', 'fullName')
+                .sort({ createdAt: -1 })
+                .lean();
+        });
+
+        console.log('Found', populatedLeaves.length, 'leave requests for admin');
+        res.json(populatedLeaves);
+    } catch (error) {
+        console.error('Error fetching admin leave requests:', error);
+        res.status(500).json({ message: 'Failed to fetch leave requests', error: error.message });
     }
 });
 

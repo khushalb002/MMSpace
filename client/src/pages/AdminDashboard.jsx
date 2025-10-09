@@ -17,7 +17,8 @@ import {
     Home,
     Target,
     Award,
-    TrendingUp
+    TrendingUp,
+    FileText
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 
@@ -131,7 +132,7 @@ const AdminDashboard = () => {
     const OverviewContent = () => (
         <div className="space-y-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                 <div
                     onClick={() => navigate('/admin/users')}
                     className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
@@ -177,7 +178,7 @@ const AdminDashboard = () => {
                 </div>
 
                 <div
-                    onClick={() => navigate('/admin/mentorship')}
+                    onClick={() => navigate('/admin/mentorship?tab=mentees')}
                     className="relative overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
                 >
                     <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
@@ -199,46 +200,24 @@ const AdminDashboard = () => {
                 </div>
 
                 <div
-                    onClick={() => navigate('/groups')}
-                    className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
+                    onClick={() => navigate('/admin/grievances')}
+                    className="relative overflow-hidden bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
                 >
                     <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
                     <div className="relative p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-purple-100 text-sm font-medium">Groups</p>
+                                <p className="text-purple-100 text-sm font-medium">Pending Grievances</p>
                                 <p className="text-white text-3xl font-bold mt-1">
-                                    {dashboardData?.stats?.totalGroups ?? '...'}
+                                    {dashboardData?.stats?.pendingGrievances ?? '...'}
                                 </p>
-                                <p className="text-purple-100 text-xs mt-1">Discussion groups</p>
+                                <p className="text-purple-100 text-xs mt-1">Awaiting resolution</p>
                             </div>
                             <div className="bg-white/20 p-3 rounded-full">
-                                <MessageSquare className="h-8 w-8 text-white" />
+                                <FileText className="h-8 w-8 text-white" />
                             </div>
                         </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-300 to-pink-400"></div>
-                    </div>
-                </div>
-
-                <div
-                    onClick={() => navigate('/leaves')}
-                    className="relative overflow-hidden bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
-                >
-                    <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
-                    <div className="relative p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-amber-100 text-sm font-medium">Pending Leaves</p>
-                                <p className="text-white text-3xl font-bold mt-1">
-                                    {dashboardData?.stats?.pendingLeaves ?? '...'}
-                                </p>
-                                <p className="text-amber-100 text-xs mt-1">Awaiting approval</p>
-                            </div>
-                            <div className="bg-white/20 p-3 rounded-full">
-                                <Calendar className="h-8 w-8 text-white" />
-                            </div>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-300 to-orange-400"></div>
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-300 to-purple-400"></div>
                     </div>
                 </div>
 

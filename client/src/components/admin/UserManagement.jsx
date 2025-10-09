@@ -26,6 +26,18 @@ const UserManagement = () => {
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [showAddUserModal, setShowAddUserModal] = useState(false)
+    const [addFormData, setAddFormData] = useState({
+        email: '',
+        password: '',
+        role: 'mentee',
+        fullName: '',
+        employeeId: '',
+        studentId: '',
+        department: '',
+        class: '',
+        section: '',
+        phone: ''
+    })
     const [selectedUser, setSelectedUser] = useState(null)
     const [showEditModal, setShowEditModal] = useState(false)
     const [editFormData, setEditFormData] = useState({
@@ -47,11 +59,8 @@ const UserManagement = () => {
     // Debounce search to avoid too many API calls
     useEffect(() => {
         const timeoutId = setTimeout(() => {
-            if (currentPage !== 1) {
-                setCurrentPage(1) // Reset to first page when searching
-            } else {
-                fetchUsers()
-            }
+            setCurrentPage(1) // Reset to first page when searching
+            fetchUsers()
         }, 500)
         return () => clearTimeout(timeoutId)
     }, [searchTerm])
@@ -140,6 +149,77 @@ const UserManagement = () => {
         } catch (error) {
             console.error('Error updating user:', error)
             toast.error('Failed to update user')
+        }
+    }
+
+    const handleAddUser = async (e) => {
+        e.preventDefault()
+
+        // Validate required fields
+        if (!addFormData.email || !addFormData.password) {
+            toast.error('Email and password are required')
+            return
+        }
+
+        try {
+            console.log('Creating user with data:', {
+                email: addFormData.email,
+                role: addFormData.role,
+                fullName: addFormData.fullName
+            })
+
+            // Try the signup endpoint with all data first
+            const signupData = {
+                email: addFormData.email,
+                password: addFormData.password,
+                role: addFormData.role,
+                fullName: addFormData.fullName,
+                phone: addFormData.phone
+            }
+
+            // Add role-specific fields
+            if (addFormData.role === 'mentor') {
+                signupData.employeeId = addFormData.employeeId
+                signupData.department = addFormData.department
+            } else if (addFormData.role === 'mentee') {
+                signupData.studentId = addFormData.studentId
+                signupData.class = addFormData.class
+                signupData.section = addFormData.section
+            }
+
+            const userResponse = await api.post('/auth/register', signupData)
+            console.log('User creation response:', userResponse.data)
+
+            toast.success('User created successfully')
+            setShowAddUserModal(false)
+            setAddFormData({
+                email: '',
+                password: '',
+                role: 'mentee',
+                fullName: '',
+                employeeId: '',
+                studentId: '',
+                department: '',
+                class: '',
+                section: '',
+                phone: ''
+            })
+            fetchUsers()
+        } catch (error) {
+            console.error('Error creating user:', error)
+            console.error('Error response:', error.response?.data)
+            console.error('Error status:', error.response?.status)
+
+            // More specific error messages
+            if (error.response?.status === 400) {
+                toast.error(error.response?.data?.message || 'Invalid user data provided')
+            } else if (error.response?.status === 409) {
+                toast.error('User with this email already exists')
+            } else if (error.response?.status === 500) {
+                toast.error('Server error. Please try again later.')
+            } else {
+                toast.error(error.response?.data?.message || 'Failed to create user')
+            }
         }
     }
 
@@ -525,6 +605,182 @@ const UserManagement = () => {
                                         className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-colors"
                                     >
                                         Update User
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add User Modal */}
+            {showAddUserModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">
+                                    Add New User
+                                </h3>
+                                <button
+                                    onClick={() => setShowAddUserModal(false)}
+                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleAddUser} className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            Email *
+                                        </label>
+                                        <input
+                                            type="email"
+                                            value={addFormData.email}
+                                            onChange={(e) => setAddFormData(prev => ({ ...prev, email: e.target.value }))}
+                                            className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            Password *
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={addFormData.password}
+                                            onChange={(e) => setAddFormData(prev => ({ ...prev, password: e.target.value }))}
+                                            className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                            required
+                                            minLength={6}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            Role *
+                                        </label>
+                                        <select
+                                            value={addFormData.role}
+                                            onChange={(e) => setAddFormData(prev => ({ ...prev, role: e.target.value }))}
+                                            className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                            required
+                                        >
+                                            <option value="mentee">Mentee</option>
+                                            <option value="mentor">Mentor</option>
+                                            <option value="admin">Admin</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            Full Name
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={addFormData.fullName}
+                                            onChange={(e) => setAddFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                                            className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            Phone
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={addFormData.phone}
+                                            onChange={(e) => setAddFormData(prev => ({ ...prev, phone: e.target.value }))}
+                                            className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                        />
+                                    </div>
+
+                                    {addFormData.role === 'mentor' && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                                    Employee ID
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addFormData.employeeId}
+                                                    onChange={(e) => setAddFormData(prev => ({ ...prev, employeeId: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                                    Department
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addFormData.department}
+                                                    onChange={(e) => setAddFormData(prev => ({ ...prev, department: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {addFormData.role === 'mentee' && (
+                                        <>
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                                    Student ID
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addFormData.studentId}
+                                                    onChange={(e) => setAddFormData(prev => ({ ...prev, studentId: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                                    Class
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addFormData.class}
+                                                    onChange={(e) => setAddFormData(prev => ({ ...prev, class: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                                    Section
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addFormData.section}
+                                                    onChange={(e) => setAddFormData(prev => ({ ...prev, section: e.target.value }))}
+                                                    className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="flex space-x-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddUserModal(false)}
+                                        className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl hover:from-blue-600 hover:to-indigo-700 transition-colors"
+                                    >
+                                        Create User
                                     </button>
                                 </div>
                             </form>
