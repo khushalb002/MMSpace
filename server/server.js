@@ -15,23 +15,46 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
+const normalizeOrigin = (origin) => {
+    if (!origin) return null;
+    try {
+        const url = new URL(origin);
+        url.pathname = '';
+        url.hash = '';
+        url.search = '';
+        return url.toString().replace(/\/$/, '');
+    } catch (error) {
+        return origin.replace(/\/$/, '');
+    }
+};
+
 const baseAllowedOrigins = [
     process.env.CLIENT_URL,
     process.env.CORS_ORIGIN,
     'http://localhost:5173',
     'http://127.0.0.1:5173'
-].filter(Boolean);
+]
+    .filter(Boolean)
+    .map((origin) => normalizeOrigin(origin))
+    .filter(Boolean);
 
 const isOriginAllowed = (origin) => {
     if (!origin) return true;
 
-    const normalizedOrigin = origin.toLowerCase();
+    const normalizedOrigin = normalizeOrigin(origin)?.toLowerCase();
 
-    if (baseAllowedOrigins.some((allowed) => allowed.toLowerCase() === normalizedOrigin)) {
+    if (
+        normalizedOrigin &&
+        baseAllowedOrigins.some((allowed) => allowed?.toLowerCase() === normalizedOrigin)
+    ) {
         return true;
     }
 
-    if (normalizedOrigin.endsWith('.vercel.app')) {
+    if (normalizedOrigin && normalizedOrigin.endsWith('.vercel.app')) {
+        return true;
+    }
+
+    if (normalizedOrigin && normalizedOrigin.replace('www.', '') === 'https://mmspace.me') {
         return true;
     }
 
