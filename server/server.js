@@ -97,6 +97,15 @@ app.get('/api/health', async (req, res) => {
     }
 });
 
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
+});
+
 // Socket.io connection handling
 require('./socket/socketHandlers')(io);
 
