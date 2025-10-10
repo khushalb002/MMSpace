@@ -15,16 +15,42 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-const allowedOrigins = [
-    process.env.CLIENT_URL || "http://localhost:5173",
-    "http://127.0.0.1:5173"
-];
+const baseAllowedOrigins = [
+    process.env.CLIENT_URL,
+    process.env.CORS_ORIGIN,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+].filter(Boolean);
+
+const isOriginAllowed = (origin) => {
+    if (!origin) return true;
+
+    const normalizedOrigin = origin.toLowerCase();
+
+    if (baseAllowedOrigins.some((allowed) => allowed.toLowerCase() === normalizedOrigin)) {
+        return true;
+    }
+
+    if (normalizedOrigin.endsWith('.vercel.app')) {
+        return true;
+    }
+
+    return false;
+};
 
 // Socket.io setup
+const corsOriginDelegate = (origin, callback) => {
+    if (isOriginAllowed(origin)) {
+        return callback(null, true);
+    }
+
+    return callback(new Error(`Not allowed by CORS: ${origin}`));
+};
+
 const io = socketIo(server, {
     cors: {
-        origin: allowedOrigins,
-        methods: ["GET", "POST"]
+        origin: corsOriginDelegate,
+        methods: ['GET', 'POST']
     }
 });
 
@@ -45,7 +71,7 @@ const limiter = rateLimit({
 // Middleware
 app.use(limiter);
 app.use(cors({
-    origin: allowedOrigins,
+    origin: corsOriginDelegate,
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
@@ -95,6 +121,15 @@ app.get('/api/health', async (req, res) => {
             error: error.message
         });
     }
+});
+
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+    res.status(200).json({ 
+        status: 'healthy', 
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+    });
 });
 
 // Socket.io connection handling
