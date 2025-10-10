@@ -18,6 +18,7 @@ import {
 import { toast } from 'react-hot-toast'
 import api from '../../services/api'
 import LoadingSpinner from '../LoadingSpinner'
+import CustomCalendar from '../CustomCalendar'
 
 const AttendanceManagement = () => {
     const [mentees, setMentees] = useState([])
@@ -192,8 +193,8 @@ const AttendanceManagement = () => {
                         <button
                             onClick={() => setViewMode('daily')}
                             className={`flex items-center px-4 py-2 rounded-xl font-medium transition-all duration-300 ${viewMode === 'daily'
-                                    ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg'
-                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                                 }`}
                         >
                             <Calendar className="h-4 w-4 mr-2" />
@@ -202,8 +203,8 @@ const AttendanceManagement = () => {
                         <button
                             onClick={() => setViewMode('monthly')}
                             className={`flex items-center px-4 py-2 rounded-xl font-medium transition-all duration-300 ${viewMode === 'monthly'
-                                    ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg'
-                                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
+                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg'
+                                : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                                 }`}
                         >
                             <BarChart3 className="h-4 w-4 mr-2" />
@@ -213,15 +214,63 @@ const AttendanceManagement = () => {
                 </div>
 
                 {/* Controls */}
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {viewMode === 'daily' ? (
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
-                        />
-                    ) : (
+                {viewMode === 'daily' ? (
+                    <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Calendar */}
+                        <div className="lg:col-span-1">
+                            <CustomCalendar
+                                selectedDate={selectedDate}
+                                onDateSelect={setSelectedDate}
+                                className="w-full"
+                            />
+                        </div>
+
+                        {/* Controls */}
+                        <div className="lg:col-span-2 space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search students..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
+                                    />
+                                </div>
+
+                                <select
+                                    value={classFilter}
+                                    onChange={(e) => setClassFilter(e.target.value)}
+                                    className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
+                                >
+                                    <option value="all">All Classes</option>
+                                    {uniqueClasses.map(cls => (
+                                        <option key={cls} value={cls}>Class {cls}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={markAllPresent}
+                                    className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
+                                >
+                                    <UserCheck className="h-5 w-5 mr-2" />
+                                    Mark All Present
+                                </button>
+                                <button
+                                    onClick={markAllAbsent}
+                                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
+                                >
+                                    <UserX className="h-5 w-5 mr-2" />
+                                    Mark All Absent
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="flex space-x-2">
                             <select
                                 value={selectedMonth}
@@ -246,49 +295,30 @@ const AttendanceManagement = () => {
                                 ))}
                             </select>
                         </div>
-                    )}
 
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Search students..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
-                        />
-                    </div>
-
-                    <select
-                        value={classFilter}
-                        onChange={(e) => setClassFilter(e.target.value)}
-                        className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
-                    >
-                        <option value="all">All Classes</option>
-                        {uniqueClasses.map(cls => (
-                            <option key={cls} value={cls}>Class {cls}</option>
-                        ))}
-                    </select>
-
-                    {viewMode === 'daily' && (
-                        <div className="flex space-x-2">
-                            <button
-                                onClick={markAllPresent}
-                                className="flex-1 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
-                            >
-                                <UserCheck className="h-4 w-4 mr-1" />
-                                All Present
-                            </button>
-                            <button
-                                onClick={markAllAbsent}
-                                className="flex-1 px-3 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
-                            >
-                                <UserX className="h-4 w-4 mr-1" />
-                                All Absent
-                            </button>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search students..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
+                            />
                         </div>
-                    )}
-                </div>
+
+                        <select
+                            value={classFilter}
+                            onChange={(e) => setClassFilter(e.target.value)}
+                            className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
+                        >
+                            <option value="all">All Classes</option>
+                            {uniqueClasses.map(cls => (
+                                <option key={cls} value={cls}>Class {cls}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
             </div>
 
             {/* Stats Cards */}
@@ -414,8 +444,8 @@ const AttendanceManagement = () => {
                                                         <button
                                                             onClick={() => handleAttendanceChange(mentee._id, selectedDate, 'present')}
                                                             className={`p-2 rounded-xl transition-all duration-300 ${attendanceStatus === 'present'
-                                                                    ? 'bg-green-500 text-white shadow-lg scale-110'
-                                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
+                                                                ? 'bg-green-500 text-white shadow-lg scale-110'
+                                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
                                                                 }`}
                                                         >
                                                             <Check className="h-4 w-4" />
@@ -423,8 +453,8 @@ const AttendanceManagement = () => {
                                                         <button
                                                             onClick={() => handleAttendanceChange(mentee._id, selectedDate, 'absent')}
                                                             className={`p-2 rounded-xl transition-all duration-300 ${attendanceStatus === 'absent'
-                                                                    ? 'bg-red-500 text-white shadow-lg scale-110'
-                                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600'
+                                                                ? 'bg-red-500 text-white shadow-lg scale-110'
+                                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600'
                                                                 }`}
                                                         >
                                                             <X className="h-4 w-4" />

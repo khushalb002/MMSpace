@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
     Users,
     UserPlus,
@@ -23,10 +24,11 @@ import api from '../../services/api'
 import LoadingSpinner from '../LoadingSpinner'
 
 const MentorMenteeManagement = () => {
+    const [searchParams] = useSearchParams()
     const [mentors, setMentors] = useState([])
     const [mentees, setMentees] = useState([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState('mentors')
+    const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'mentors')
     const [searchTerm, setSearchTerm] = useState('')
     const [showAssignModal, setShowAssignModal] = useState(false)
     const [selectedMentee, setSelectedMentee] = useState(null)
@@ -275,7 +277,10 @@ const MentorMenteeManagement = () => {
                                     <Edit className="h-4 w-4 mr-1" />
                                     Edit
                                 </button>
-                                <button className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-3 rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center">
+                                <button
+                                    onClick={() => setActiveTab('mentees')}
+                                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-3 rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
+                                >
                                     <Users className="h-4 w-4 mr-1" />
                                     View Mentees
                                 </button>

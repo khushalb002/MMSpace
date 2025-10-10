@@ -40,6 +40,8 @@ const Layout = ({ children }) => {
         { name: 'Mentorship', href: '/admin/mentorship', icon: Target, roles: ['admin'] },
         { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, roles: ['admin'] },
         { name: 'Attendance', href: '/admin/attendance', icon: Calendar, roles: ['admin'] },
+        { name: 'Leaves', href: '/admin/leaves', icon: Calendar, roles: ['admin'] },
+        { name: 'Grievances', href: '/admin/grievances', icon: FileText, roles: ['admin'] },
         { name: 'Groups', href: '/groups', icon: Users, roles: ['mentor'] },
         { name: 'Chat', href: '/chat', icon: MessageCircle, roles: ['mentor', 'mentee'] },
         { name: 'Leaves', href: '/leaves', icon: Calendar, roles: ['mentor', 'mentee'] },

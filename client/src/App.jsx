@@ -21,6 +21,8 @@ import UserManagementPage from './pages/admin/UserManagementPage'
 import MentorshipPage from './pages/admin/MentorshipPage'
 import AnalyticsPage from './pages/admin/AnalyticsPage'
 import AdminAttendancePage from './pages/admin/AttendancePage'
+import AdminLeavesPage from './pages/admin/LeavesPage'
+import AdminGrievancesPage from './pages/admin/GrievancesPage'
 import initAutoHideScrollbars from './utils/autoHideScrollbar'
 
 function App() {
@@ -76,6 +78,22 @@ function App() {
                                     element={
                                         <ProtectedRoute>
                                             <AdminAttendancePage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/admin/leaves"
+                                    element={
+                                        <ProtectedRoute>
+                                            <AdminLeavesPage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/admin/grievances"
+                                    element={
+                                        <ProtectedRoute>
+                                            <AdminGrievancesPage />
                                         </ProtectedRoute>
                                     }
                                 />
