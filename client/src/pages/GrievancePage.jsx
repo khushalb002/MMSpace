@@ -33,7 +33,11 @@ const GrievancePage = () => {
 
     const fetchGrievances = async () => {
         try {
-            const endpoint = user.role === 'mentor' ? '/grievances/mentor' : '/grievances/mentee'
+            const endpoint = user.role === 'mentor'
+                ? '/grievances/mentor'
+                : user.role === 'guardian'
+                    ? '/grievances/guardian'
+                    : '/grievances/mentee'
             const params = filter !== 'all' ? `?status=${filter}` : ''
             const response = await api.get(`${endpoint}${params}`)
             setGrievances(response.data)
@@ -180,7 +184,9 @@ const GrievancePage = () => {
                             <p className="mt-2 text-slate-600 dark:text-slate-300">
                                 {user.role === 'mentor'
                                     ? 'Review and manage grievances from your mentees'
-                                    : 'Submit and track your grievances for resolution'
+                                    : user.role === 'guardian'
+                                        ? 'Monitor complaints raised by your student and follow up on their status'
+                                        : 'Submit and track your grievances for resolution'
                                 }
                             </p>
                         </div>
@@ -337,7 +343,9 @@ const GrievancePage = () => {
                             <p className="text-slate-500 dark:text-slate-400">
                                 {user.role === 'mentee'
                                     ? 'You haven\'t submitted any grievances yet.'
-                                    : 'No grievances from your mentees.'
+                                    : user.role === 'guardian'
+                                        ? 'There are no complaints from your linked students yet.'
+                                        : 'No grievances from your mentees.'
                                 }
                             </p>
                         </div>

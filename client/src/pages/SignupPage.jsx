@@ -64,7 +64,7 @@ const ModernSignupPage = () => {
                             <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                                 I am a:
                             </label>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <label className={`relative flex cursor-pointer rounded-2xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] ${watchRole === 'mentor'
                                     ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-lg'
                                     : 'border-white/20 dark:border-slate-600/30 bg-white/50 dark:bg-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-600/50'
@@ -103,6 +103,27 @@ const ModernSignupPage = () => {
                                         <div>
                                             <div className="text-sm font-semibold text-slate-800 dark:text-white">Mentee</div>
                                             <div className="text-xs text-slate-500 dark:text-slate-400">Student</div>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label className={`relative flex cursor-pointer rounded-2xl border-2 p-4 transition-all duration-300 hover:scale-[1.02] ${watchRole === 'guardian'
+                                    ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-900/20 shadow-lg'
+                                    : 'border-white/20 dark:border-slate-600/30 bg-white/50 dark:bg-slate-700/50 hover:bg-white/80 dark:hover:bg-slate-600/50'
+                                    }`}>
+                                    <input
+                                        {...register('role', { required: 'Please select your role' })}
+                                        type="radio"
+                                        value="guardian"
+                                        className="sr-only"
+                                    />
+                                    <div className="flex items-center space-x-3">
+                                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                                            <Shield className="h-5 w-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-800 dark:text-white">Guardian</div>
+                                            <div className="text-xs text-slate-500 dark:text-slate-400">Parent / Caregiver</div>
                                         </div>
                                     </div>
                                 </label>
@@ -307,6 +328,41 @@ const ModernSignupPage = () => {
                                         type="text"
                                         className="w-full bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm border border-white/20 dark:border-slate-600/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 transition-all duration-300"
                                         placeholder="Leave blank for auto-generation"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {watchRole === 'guardian' && (
+                            <div className="space-y-4 p-4 bg-emerald-50/50 dark:bg-emerald-900/20 rounded-2xl border border-emerald-200/50 dark:border-emerald-800/50">
+                                <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Guardian Details</h3>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                        Student ID
+                                    </label>
+                                    <input
+                                        {...register('studentId', { required: 'Student ID is required to link your account' })}
+                                        type="text"
+                                        className="w-full bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm border border-white/20 dark:border-slate-600/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 transition-all duration-300"
+                                        placeholder="Enter your child's student ID"
+                                    />
+                                    {errors.studentId && (
+                                        <p className="text-sm text-red-500 flex items-center mt-1">
+                                            <span className="mr-1">⚠️</span>
+                                            {errors.studentId.message}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                        Relationship (Optional)
+                                    </label>
+                                    <input
+                                        {...register('relationship')}
+                                        type="text"
+                                        className="w-full bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm border border-white/20 dark:border-slate-600/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-slate-800 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 transition-all duration-300"
+                                        placeholder="e.g., Mother, Father, Guardian"
                                     />
                                 </div>
                             </div>

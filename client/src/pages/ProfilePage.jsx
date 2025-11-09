@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/Layout'
 import LoadingSpinner from '../components/LoadingSpinner'
-import { User, Mail, Phone, Building, Calendar, BookOpen, Edit2, Save, X } from 'lucide-react'
+import { User, Mail, Phone, Building, Calendar, BookOpen, Edit2, Save, X, Users, MessageSquare, FileText } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import api from '../services/api'
 
@@ -422,6 +422,143 @@ const ProfilePage = () => {
         </div>
     )
 
+    const GuardianProfile = () => {
+        const guardianMentees = profile?.menteeIds || []
+
+        return (
+            <div className="space-y-8">
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                    <div className="flex items-center space-x-6">
+                        <div className="flex-shrink-0">
+                            <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-2xl">
+                                <span className="text-3xl font-bold text-white">
+                                    {profile.fullName?.charAt(0)}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-3xl font-bold text-slate-800 dark:text-white">{profile.fullName}</h1>
+                            <p className="text-lg text-slate-600 dark:text-slate-300 capitalize font-medium">{user.role}</p>
+                            {profile.relationship && (
+                                <p className="text-sm text-slate-500 dark:text-slate-400">Relationship: {profile.relationship}</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                    <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Contact Information</h3>
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-4">
+                                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+                                    <Mail className="h-6 w-6 text-white" />
+                                </div>
+                                <div>
+                                    <dt className="text-sm font-semibold text-slate-600 dark:text-slate-400">Email</dt>
+                                    <dd className="text-lg font-medium text-slate-800 dark:text-white">{user.email}</dd>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-4">
+                                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
+                                    <Phone className="h-6 w-6 text-white" />
+                                </div>
+                                <div>
+                                    <dt className="text-sm font-semibold text-slate-600 dark:text-slate-400">Phone</dt>
+                                    <dd className="text-lg font-medium text-slate-800 dark:text-white">{profile.phone || 'Not provided'}</dd>
+                                </div>
+                            </div>
+                            {profile.address && (
+                                <div className="flex items-center space-x-4">
+                                    <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg">
+                                        <Building className="h-6 w-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <dt className="text-sm font-semibold text-slate-600 dark:text-slate-400">Address</dt>
+                                        <dd className="text-lg font-medium text-slate-800 dark:text-white">{profile.address}</dd>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Linked Students</h3>
+                        {guardianMentees.length > 0 ? (
+                            <div className="space-y-4">
+                                {guardianMentees.map((mentee) => (
+                                    <div
+                                        key={mentee._id}
+                                        className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4 border border-white/20 dark:border-slate-600/30"
+                                    >
+                                        <div className="flex items-start space-x-4">
+                                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold shadow-lg">
+                                                {mentee.fullName?.charAt(0)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                                                    {mentee.fullName}
+                                                </h4>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                    ID: {mentee.studentId} • Class {mentee.class}-{mentee.section}
+                                                </p>
+                                                {mentee.attendance && (
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                        Attendance: {mentee.attendance.percentage || 0}%
+                                                    </p>
+                                                )}
+                                                {mentee.mentorId && (
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                        Mentor: {mentee.mentorId.fullName} ({mentee.mentorId.department})
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 flex items-center space-x-2">
+                                            {mentee.mentorId && (
+                                                <button
+                                                    onClick={() => window.location.href = `/chat/individual_${mentee._id}`}
+                                                    className="flex items-center px-3 py-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all duration-300"
+                                                >
+                                                    <MessageSquare className="h-4 w-4 mr-1" />
+                                                    Chat with Mentor
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => window.location.href = '/grievances'}
+                                                className="flex items-center px-3 py-2 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-medium hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all duration-300"
+                                            >
+                                                <FileText className="h-4 w-4 mr-1" />
+                                                View Complaints
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    No students linked yet. Please contact the administrator for assistance.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Notes</h3>
+                    <div className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-6">
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line text-sm">
+                            {profile.notes || 'No additional notes recorded.'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <Layout>
             <div className="space-y-8">
@@ -435,7 +572,7 @@ const ProfilePage = () => {
                     </p>
                 </div>
 
-                {user.role === 'mentor' ? MentorProfile : <MenteeProfile />}
+                {user.role === 'mentor' ? MentorProfile : user.role === 'guardian' ? <GuardianProfile /> : <MenteeProfile />}
             </div>
         </Layout>
     )

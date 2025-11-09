@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema({
     conversationType: {
         type: String,
-        enum: ['group', 'individual'],
+        enum: ['group', 'individual', 'guardian'],
         required: true
     },
     conversationId: {
@@ -16,7 +16,7 @@ const messageSchema = new mongoose.Schema({
     },
     senderRole: {
         type: String,
-        enum: ['mentor', 'mentee'],
+        enum: ['mentor', 'mentee', 'guardian'],
         required: true
     },
     content: {
