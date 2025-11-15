@@ -30,6 +30,8 @@ import CustomCalendar from '../CustomCalendar'
 const AttendanceManagement = () => {
     const [mentees, setMentees] = useState([])
     const [attendance, setAttendance] = useState({})
+    const [trendAttendance, setTrendAttendance] = useState({})
+    const [currentMonthAttendance, setCurrentMonthAttendance] = useState({})
     const [loading, setLoading] = useState(true)
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1)
@@ -43,6 +45,8 @@ const AttendanceManagement = () => {
 
     useEffect(() => {
         fetchMentees()
+        fetchTrendAttendance()
+        fetchCurrentMonthAttendance()
         if (viewMode === 'daily') {
             fetchAttendance()
         } else {
@@ -83,6 +87,50 @@ const AttendanceManagement = () => {
             toast.error('Failed to fetch monthly attendance data')
         } finally {
             setLoading(false)
+        }
+    }
+
+    const fetchCurrentMonthAttendance = async () => {
+        try {
+            const date = new Date(selectedDate)
+            const month = date.getMonth() + 1
+            const year = date.getFullYear()
+            console.log('Fetching attendance for month:', month, 'year:', year)
+            const response = await api.get(`/admin/attendance?month=${month}&year=${year}`)
+            setCurrentMonthAttendance(response.data)
+            console.log('Current month attendance updated:', response.data)
+        } catch (error) {
+            console.error('Error fetching current month attendance:', error)
+        }
+    }
+
+    const fetchTrendAttendance = async () => {
+        try {
+            const today = new Date()
+            const startDate = new Date(today)
+            startDate.setDate(today.getDate() - 6)
+            
+            const startMonth = startDate.getMonth() + 1
+            const startYear = startDate.getFullYear()
+            const endMonth = today.getMonth() + 1
+            const endYear = today.getFullYear()
+            
+            let allAttendanceData = {}
+            
+            if (startMonth === endMonth && startYear === endYear) {
+                const response = await api.get(`/admin/attendance?month=${startMonth}&year=${startYear}`)
+                allAttendanceData = response.data
+            } else {
+                const [response1, response2] = await Promise.all([
+                    api.get(`/admin/attendance?month=${startMonth}&year=${startYear}`),
+                    api.get(`/admin/attendance?month=${endMonth}&year=${endYear}`)
+                ])
+                allAttendanceData = { ...response1.data, ...response2.data }
+            }
+            
+            setTrendAttendance(allAttendanceData)
+        } catch (error) {
+            console.error('Error fetching trend attendance:', error)
         }
     }
 
@@ -164,13 +212,34 @@ const AttendanceManagement = () => {
         return { present, absent, total: daysInMonth, percentage: present > 0 ? ((present / (present + absent)) * 100).toFixed(1) : 0 }
     }
 
+    const getCurrentMonthStats = (menteeId) => {
+        const menteeAttendance = currentMonthAttendance[menteeId] || {}
+        const date = new Date(selectedDate)
+        const month = date.getMonth() + 1
+        const year = date.getFullYear()
+        const daysInMonth = new Date(year, month, 0).getDate()
+        let present = 0
+        let absent = 0
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+            const status = menteeAttendance[dateStr]
+            if (status === 'present') present++
+            else if (status === 'absent') absent++
+        }
+
+        const percentage = present > 0 ? ((present / (present + absent)) * 100).toFixed(1) : 0
+        console.log(`Stats for mentee ${menteeId} - Month: ${month}/${year}, Present: ${present}, Absent: ${absent}, %: ${percentage}`)
+        return { present, absent, total: daysInMonth, percentage }
+    }
+
     const getAttendanceInsights = () => {
         const lowAttendance = []
         const goodAttendance = []
         const highAttendance = []
 
         mentees.forEach(mentee => {
-            const stats = getMonthlyStats(mentee._id)
+            const stats = getCurrentMonthStats(mentee._id)
             const percentage = parseFloat(stats.percentage)
 
             if (percentage > 0) {
@@ -205,7 +274,7 @@ const AttendanceManagement = () => {
             let absent = 0
 
             mentees.forEach(mentee => {
-                const status = attendance[mentee._id]?.[dateStr]
+                const status = trendAttendance[mentee._id]?.[dateStr]
                 if (status === 'present') present++
                 else if (status === 'absent') absent++
             })
@@ -235,9 +304,9 @@ const AttendanceManagement = () => {
                 date.setDate(date.getDate() - i)
                 const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
-                if (attendance[mentee._id]?.[dateStr] === 'absent') {
+                if (trendAttendance[mentee._id]?.[dateStr] === 'absent') {
                     consecutiveAbsences++
-                } else if (attendance[mentee._id]?.[dateStr] === 'present') {
+                } else if (trendAttendance[mentee._id]?.[dateStr] === 'present') {
                     break
                 }
             }
@@ -327,40 +396,6 @@ const AttendanceManagement = () => {
                         </button>
                     </div>
                 </div>
-
-                {/* Quick Summary Stats */}
-                {viewMode === 'daily' && (
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-800/50">
-                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
-                                <Users className="h-4 w-4" />
-                                <span className="text-xs font-semibold uppercase tracking-wide">Total</span>
-                            </div>
-                            <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.total}</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200/50 dark:border-green-800/50">
-                            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
-                                <UserCheck className="h-4 w-4" />
-                                <span className="text-xs font-semibold uppercase tracking-wide">Present</span>
-                            </div>
-                            <p className="text-2xl font-bold text-green-700 dark:text-green-300">{stats.present}</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-4 border border-red-200/50 dark:border-red-800/50">
-                            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
-                                <UserX className="h-4 w-4" />
-                                <span className="text-xs font-semibold uppercase tracking-wide">Absent</span>
-                            </div>
-                            <p className="text-2xl font-bold text-red-700 dark:text-red-300">{stats.absent}</p>
-                        </div>
-                        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-800/50">
-                            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
-                                <Calendar className="h-4 w-4" />
-                                <span className="text-xs font-semibold uppercase tracking-wide">Unmarked</span>
-                            </div>
-                            <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{stats.unmarked}</p>
-                        </div>
-                    </div>
-                )}
 
                 {/* Controls */}
                 {viewMode === 'daily' ? (
@@ -476,30 +511,32 @@ const AttendanceManagement = () => {
                                         <Activity className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                                         <h4 className="text-sm font-semibold text-slate-800 dark:text-white">7-Day Trend</h4>
                                     </div>
-                                    <div className="flex items-end justify-between gap-1.5 h-16">
+                                    <div className="flex items-end justify-between gap-4 h-24">
                                         {getAttendanceTrends().map((trend, index) => {
-                                            const maxHeight = Math.max(...getAttendanceTrends().map(t => t.total))
-                                            const presentHeight = maxHeight > 0 ? (trend.present / maxHeight) * 100 : 0
-                                            const absentHeight = maxHeight > 0 ? (trend.absent / maxHeight) * 100 : 0
+                                            const maxValue = Math.max(
+                                                ...getAttendanceTrends().map(t => Math.max(t.present, t.absent))
+                                            )
+                                            const presentHeight = maxValue > 0 ? (trend.present / maxValue) * 100 : 0
+                                            const absentHeight = maxValue > 0 ? (trend.absent / maxValue) * 100 : 0
 
                                             return (
-                                                <div key={index} className="flex-1 flex flex-col items-center gap-1">
-                                                    <div className="w-full flex flex-col items-center gap-0.5 relative" style={{ height: '48px' }}>
-                                                        <div className="w-full absolute bottom-0 flex flex-col gap-0.5">
-                                                            {trend.present > 0 && (
-                                                                <div
-                                                                    className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all duration-300 hover:opacity-80"
-                                                                    style={{ height: `${presentHeight * 0.48}px` }}
-                                                                    title={`Present: ${trend.present}`}
-                                                                />
-                                                            )}
-                                                            {trend.absent > 0 && (
-                                                                <div
-                                                                    className="w-full bg-gradient-to-t from-red-500 to-rose-400 rounded-t transition-all duration-300 hover:opacity-80"
-                                                                    style={{ height: `${absentHeight * 0.48}px` }}
-                                                                    title={`Absent: ${trend.absent}`}
-                                                                />
-                                                            )}
+                                                <div key={index} className="flex-1 flex flex-col items-center gap-1.5">
+                                                    <div className="w-full flex items-end justify-center gap-1.5" style={{ height: '80px' }}>
+                                                        {/* Present Bar */}
+                                                        <div className="flex-1 flex flex-col items-center justify-end relative group">
+                                                            <div
+                                                                className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all duration-300 hover:shadow-lg hover:scale-105"
+                                                                style={{ height: `${presentHeight * 0.8}px`, minHeight: trend.present > 0 ? '4px' : '0' }}
+                                                                title={`Present: ${trend.present}`}
+                                                            />
+                                                        </div>
+                                                        {/* Absent Bar */}
+                                                        <div className="flex-1 flex flex-col items-center justify-end relative group">
+                                                            <div
+                                                                className="w-full bg-gradient-to-t from-red-500 to-rose-400 rounded-t transition-all duration-300 hover:shadow-lg hover:scale-105"
+                                                                style={{ height: `${absentHeight * 0.8}px`, minHeight: trend.absent > 0 ? '4px' : '0' }}
+                                                                title={`Absent: ${trend.absent}`}
+                                                            />
                                                         </div>
                                                     </div>
                                                     <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">{trend.day}</span>
@@ -588,7 +625,7 @@ const AttendanceManagement = () => {
                                 onChange={(e) => setSelectedYear(parseInt(e.target.value))}
                                 className="flex-1 px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
                             >
-                                {Array.from({ length: 5 }, (_, i) => (
+                                {Array.from({ length: 6 }, (_, i) => (
                                     <option key={2020 + i} value={2020 + i}>
                                         {2020 + i}
                                     </option>
@@ -620,6 +657,40 @@ const AttendanceManagement = () => {
                     </div>
                 )}
             </div>
+
+            {/* Quick Summary Stats */}
+            {viewMode === 'daily' && (
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-800/50">
+                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+                            <Users className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase tracking-wide">Total</span>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.total}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200/50 dark:border-green-800/50">
+                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
+                            <UserCheck className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase tracking-wide">Present</span>
+                        </div>
+                        <p className="text-2xl font-bold text-green-700 dark:text-green-300">{stats.present}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-4 border border-red-200/50 dark:border-red-800/50">
+                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
+                            <UserX className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase tracking-wide">Absent</span>
+                        </div>
+                        <p className="text-2xl font-bold text-red-700 dark:text-red-300">{stats.absent}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-800/50">
+                        <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
+                            <Calendar className="h-4 w-4" />
+                            <span className="text-xs font-semibold uppercase tracking-wide">Unmarked</span>
+                        </div>
+                        <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{stats.unmarked}</p>
+                    </div>
+                </div>
+            )}
 
             {/* Attendance Table */}
             <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border border-white/20 dark:border-slate-700/50 overflow-hidden">
@@ -655,7 +726,10 @@ const AttendanceManagement = () => {
                                     <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">ID</th>
                                     <th className="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Class</th>
                                     {viewMode === 'daily' ? (
-                                        <th className="text-center py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Attendance</th>
+                                        <>
+                                            <th className="text-center py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Attendance</th>
+                                            <th className="text-center py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Month %</th>
+                                        </>
                                     ) : (
                                         <>
                                             <th className="text-center py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Present</th>
@@ -668,6 +742,7 @@ const AttendanceManagement = () => {
                             <tbody>
                                 {filteredMentees.map((mentee, index) => {
                                     const monthlyStats = viewMode === 'monthly' ? getMonthlyStats(mentee._id) : null
+                                    const currentMonthStats = viewMode === 'daily' ? getCurrentMonthStats(mentee._id) : null
                                     const attendanceStatus = attendance[mentee._id]?.[selectedDate]
 
                                     return (
@@ -697,40 +772,63 @@ const AttendanceManagement = () => {
                                                 {mentee.class}-{mentee.section}
                                             </td>
                                             {viewMode === 'daily' ? (
-                                                <td className="py-3 px-4">
-                                                    <div className="flex items-center justify-center space-x-2">
-                                                        <button
-                                                            onClick={() => handleAttendanceChange(mentee._id, selectedDate, 'present')}
-                                                            className={`p-2 rounded-xl transition-all duration-300 ${attendanceStatus === 'present'
-                                                                ? 'bg-green-500 text-white shadow-lg scale-110'
-                                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
-                                                                }`}
-                                                            title="Mark Present"
-                                                        >
-                                                            <Check className="h-4 w-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleAttendanceChange(mentee._id, selectedDate, 'absent')}
-                                                            className={`p-2 rounded-xl transition-all duration-300 ${attendanceStatus === 'absent'
-                                                                ? 'bg-red-500 text-white shadow-lg scale-110'
-                                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600'
-                                                                }`}
-                                                            title="Mark Absent"
-                                                        >
-                                                            <X className="h-4 w-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleAttendanceChange(mentee._id, selectedDate, null)}
-                                                            className={`p-2 rounded-xl transition-all duration-300 ${!attendanceStatus
-                                                                ? 'bg-amber-500 text-white shadow-lg scale-110'
-                                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-600'
-                                                                }`}
-                                                            title="Unmark"
-                                                        >
-                                                            <Minus className="h-4 w-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                <>
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center justify-center space-x-2">
+                                                            <button
+                                                                onClick={() => handleAttendanceChange(mentee._id, selectedDate, 'present')}
+                                                                className={`p-2 rounded-xl transition-all duration-300 ${attendanceStatus === 'present'
+                                                                    ? 'bg-green-500 text-white shadow-lg scale-110'
+                                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
+                                                                    }`}
+                                                                title="Mark Present"
+                                                            >
+                                                                <Check className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAttendanceChange(mentee._id, selectedDate, 'absent')}
+                                                                className={`p-2 rounded-xl transition-all duration-300 ${attendanceStatus === 'absent'
+                                                                    ? 'bg-red-500 text-white shadow-lg scale-110'
+                                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600'
+                                                                    }`}
+                                                                title="Mark Absent"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAttendanceChange(mentee._id, selectedDate, null)}
+                                                                className={`p-2 rounded-xl transition-all duration-300 ${!attendanceStatus
+                                                                    ? 'bg-amber-500 text-white shadow-lg scale-110'
+                                                                    : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-600'
+                                                                    }`}
+                                                                title="Unmark"
+                                                            >
+                                                                <Minus className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4">
+                                                        <div className="flex items-center justify-center">
+                                                            <div className="w-20 bg-slate-200 dark:bg-slate-700 rounded-full h-2 mr-2">
+                                                                <div
+                                                                    className={`h-2 rounded-full transition-all duration-500 ${
+                                                                        currentMonthStats.percentage < 50 
+                                                                            ? 'bg-gradient-to-r from-red-500 to-red-600' 
+                                                                            : currentMonthStats.percentage >= 70 && currentMonthStats.percentage <= 90
+                                                                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                                                                            : currentMonthStats.percentage > 90
+                                                                            ? 'bg-gradient-to-r from-green-500 to-emerald-600'
+                                                                            : 'bg-gradient-to-r from-amber-500 to-orange-600'
+                                                                    }`}
+                                                                    style={{ width: `${currentMonthStats.percentage}%` }}
+                                                                ></div>
+                                                            </div>
+                                                            <span className="text-sm font-medium text-slate-800 dark:text-white">
+                                                                {currentMonthStats.percentage}%
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                </>
                                             ) : (
                                                 <>
                                                     <td className="py-3 px-4 text-center">
