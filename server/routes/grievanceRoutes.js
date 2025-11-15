@@ -369,4 +369,74 @@ router.put('/:id/reject', auth, roleCheck(['mentor', 'admin']), async (req, res)
     }
 });
 
+// @route   PUT /api/grievances/:id/student-confirm
+// @desc    Student confirms whether issue was resolved
+// @access  Private (Mentee only)
+router.put('/:id/student-confirm', auth, roleCheck(['mentee']), async (req, res) => {
+    try {
+        const { isResolved, feedback } = req.body;
+
+        if (!isResolved || (isResolved !== 'yes' && isResolved !== 'no')) {
+            return res.status(400).json({ message: 'Invalid resolution confirmation' });
+        }
+
+        const mentee = await safeFindOne(Mentee, { userId: req.user._id });
+
+        if (!mentee) {
+            return res.status(404).json({ message: 'Mentee profile not found' });
+        }
+
+        // Verify that this grievance belongs to the mentee
+        const grievance = await safeFindOne(Grievance, { _id: req.params.id });
+        
+        if (!grievance) {
+            return res.status(404).json({ message: 'Grievance not found' });
+        }
+
+        if (grievance.menteeId.toString() !== mentee._id.toString()) {
+            return res.status(403).json({ message: 'Unauthorized to confirm this grievance' });
+        }
+
+        if (grievance.status !== 'resolved') {
+            return res.status(400).json({ message: 'Only resolved grievances can be confirmed' });
+        }
+
+        let updateData = {
+            studentResolutionConfirmation: isResolved,
+            studentConfirmedAt: new Date()
+        };
+
+        if (feedback) {
+            updateData.studentFeedback = feedback;
+        }
+
+        const updatedGrievance = await safeUpdate(
+            Grievance,
+            { _id: req.params.id },
+            updateData
+        );
+
+        // Get populated version
+        const populatedGrievance = await executeWithRetry(async () => {
+            return Grievance.findById(updatedGrievance._id)
+                .populate('menteeId', 'fullName studentId')
+                .lean();
+        });
+
+        // Emit notification to mentor
+        if (grievance.mentorId) {
+            req.io.to(grievance.mentorId.toString()).emit('studentResolutionConfirmation', {
+                grievanceId: updatedGrievance._id,
+                confirmation: isResolved,
+                studentName: populatedGrievance.menteeId?.fullName
+            });
+        }
+
+        res.json(populatedGrievance);
+    } catch (error) {
+        console.error('Error confirming resolution:', error);
+        res.status(500).json({ message: 'Failed to confirm resolution' });
+    }
+});
+
 module.exports = router;
