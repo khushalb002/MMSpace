@@ -66,8 +66,18 @@ const grievanceSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    studentResolutionConfirmation: {
+        type: String,
+        enum: ['pending', 'yes', 'no'],
+        default: 'pending'
+    },
+    studentFeedback: {
+        type: String,
+        default: ''
+    },
     reviewedAt: Date,
-    resolvedAt: Date
+    resolvedAt: Date,
+    studentConfirmedAt: Date
 }, {
     timestamps: true
 });

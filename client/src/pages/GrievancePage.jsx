@@ -125,6 +125,22 @@ const GrievancePage = () => {
         }
     }
 
+    const handleStudentConfirmation = async (grievanceId, isResolved) => {
+        try {
+            const response = await api.put(`/grievances/${grievanceId}/student-confirm`, {
+                isResolved: isResolved ? 'yes' : 'no',
+                feedback: ''
+            })
+            setGrievances(grievances.map(grievance =>
+                grievance._id === grievanceId ? response.data : grievance
+            ))
+            setSelectedGrievance(response.data)
+            toast.success(`Resolution marked as ${isResolved ? 'confirmed' : 'not confirmed'}!`)
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to confirm resolution')
+        }
+    }
+
     const getStatusIcon = (status) => {
         switch (status) {
             case 'resolved':
@@ -278,6 +294,66 @@ const GrievancePage = () => {
                                                 <Eye className="h-4 w-4 mr-1" />
                                                 View Details
                                             </button>
+
+                                            {/* MENTEE: Show Resolve button on resolved grievances */}
+                                            {user.role === 'mentee' && grievance.status === 'resolved' && grievance.studentResolutionConfirmation === 'pending' && (
+                                                <div className="flex space-x-2">
+                                                    <button
+                                                        onClick={() => handleStudentConfirmation(grievance._id, true)}
+                                                        className="px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-xl font-medium hover:bg-green-200 dark:hover:bg-green-900/50 transition-all duration-300 flex items-center"
+                                                    >
+                                                        <Check className="h-4 w-4 mr-1" />
+                                                        Resolved
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleStudentConfirmation(grievance._id, false)}
+                                                        className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-300 flex items-center"
+                                                    >
+                                                        <X className="h-4 w-4 mr-1" />
+                                                        Not Resolved
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {/* MENTEE: Show confirmation status */}
+                                            {user.role === 'mentee' && grievance.status === 'resolved' && grievance.studentResolutionConfirmation !== 'pending' && (
+                                                <div className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center ${grievance.studentResolutionConfirmation === 'yes'
+                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                                }`}>
+                                                    {grievance.studentResolutionConfirmation === 'yes' ? (
+                                                        <>
+                                                            <Check className="h-4 w-4 mr-1" />
+                                                            Confirmed Resolved
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <X className="h-4 w-4 mr-1" />
+                                                            Marked Not Resolved
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* MENTOR: Show student's confirmation status on resolved grievances */}
+                                            {user.role === 'mentor' && grievance.status === 'resolved' && grievance.studentResolutionConfirmation !== 'pending' && (
+                                                <div className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center ${grievance.studentResolutionConfirmation === 'yes'
+                                                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                                    : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                                }`}>
+                                                    {grievance.studentResolutionConfirmation === 'yes' ? (
+                                                        <>
+                                                            <Check className="h-4 w-4 mr-1" />
+                                                            Student Confirmed
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <X className="h-4 w-4 mr-1" />
+                                                            Student Denied
+                                                        </>
+                                                    )}
+                                                </div>
+                                            )}
 
                                             {user.role === 'mentor' && grievance.status === 'pending' && (
                                                 <div className="flex space-x-2">
@@ -611,6 +687,67 @@ const GrievancePage = () => {
                                                 {selectedGrievance.resolution}
                                             </p>
                                         </div>
+                                    </div>
+                                )}
+
+                                {selectedGrievance.status === 'resolved' && user.role === 'mentee' && (
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                                            Has your issue been resolved?
+                                        </h4>
+                                        {selectedGrievance.studentResolutionConfirmation === 'pending' ? (
+                                            <div className="flex space-x-3">
+                                                <button
+                                                    onClick={() => handleStudentConfirmation(selectedGrievance._id, true)}
+                                                    className="flex-1 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-xl font-medium hover:bg-green-200 dark:hover:bg-green-900/50 transition-all duration-300"
+                                                >
+                                                    <Check className="h-4 w-4 inline mr-1" />
+                                                    Yes, Resolved
+                                                </button>
+                                                <button
+                                                    onClick={() => handleStudentConfirmation(selectedGrievance._id, false)}
+                                                    className="flex-1 px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-xl font-medium hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-300"
+                                                >
+                                                    <X className="h-4 w-4 inline mr-1" />
+                                                    No, Not Resolved
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className={`p-4 rounded-xl ${selectedGrievance.studentResolutionConfirmation === 'yes'
+                                                ? 'bg-green-50/50 dark:bg-green-900/20'
+                                                : 'bg-red-50/50 dark:bg-red-900/20'
+                                                }`}>
+                                                <p className={`font-medium ${selectedGrievance.studentResolutionConfirmation === 'yes'
+                                                    ? 'text-green-700 dark:text-green-300'
+                                                    : 'text-red-700 dark:text-red-300'
+                                                    }`}>
+                                                    {selectedGrievance.studentResolutionConfirmation === 'yes'
+                                                        ? '✓ You confirmed this issue has been resolved'
+                                                        : '✗ You indicated this issue has not been resolved'
+                                                    }
+                                                </p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                                                    Confirmed on {new Date(selectedGrievance.studentConfirmedAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {selectedGrievance.status === 'resolved' && user.role !== 'mentee' && selectedGrievance.studentResolutionConfirmation !== 'pending' && (
+                                    <div className={`p-4 rounded-xl ${selectedGrievance.studentResolutionConfirmation === 'yes'
+                                        ? 'bg-green-50/50 dark:bg-green-900/20'
+                                        : 'bg-red-50/50 dark:bg-red-900/20'
+                                        }`}>
+                                        <h4 className="text-sm font-semibold mb-2">
+                                            {selectedGrievance.studentResolutionConfirmation === 'yes'
+                                                ? '✓ Student Confirmed - Issue Resolved'
+                                                : '✗ Student Indicated - Issue Not Resolved'
+                                            }
+                                        </h4>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                                            Confirmed on {new Date(selectedGrievance.studentConfirmedAt).toLocaleDateString()}
+                                        </p>
                                     </div>
                                 )}
 
