@@ -34,7 +34,7 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
         ]
 
-        // Use actual data if available, otherwise generate sample data
+        // Use studentDetails if available, otherwise fallback to student prop
         const attendanceData = studentDetails?.attendanceHistory || months.map((month, index) => ({
             month,
             percentage: Math.floor(Math.random() * 30) + 70 // Random between 70-100%
@@ -100,6 +100,9 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
 
     if (!isOpen) return null
 
+    // Use studentDetails if available, otherwise fallback to student prop
+    const displayData = studentDetails || student;
+
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50 flex items-center justify-center p-4">
             <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 w-full max-w-4xl max-h-[90vh] overflow-hidden">
@@ -109,15 +112,15 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
                         <div className="flex items-center space-x-4">
                             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg">
                                 <span className="text-2xl font-bold text-white">
-                                    {student?.fullName?.charAt(0) || 'S'}
+                                    {displayData?.fullName?.charAt(0) || 'S'}
                                 </span>
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
-                                    {student?.fullName || 'Student Details'}
+                                    {displayData?.fullName || 'Student Details'}
                                 </h2>
                                 <p className="text-slate-600 dark:text-slate-400">
-                                    Student ID: {student?.studentId}
+                                    Student ID: {displayData?.studentId}
                                 </p>
                             </div>
                         </div>
@@ -148,7 +151,7 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
                                         <div>
                                             <p className="text-sm text-slate-600 dark:text-slate-400">Class</p>
                                             <p className="text-lg font-bold text-slate-800 dark:text-white">
-                                                {student?.class}-{student?.section}
+                                                {displayData?.class}-{displayData?.section}
                                             </p>
                                         </div>
                                     </div>
@@ -162,7 +165,7 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
                                         <div>
                                             <p className="text-sm text-slate-600 dark:text-slate-400">Attendance</p>
                                             <p className="text-lg font-bold text-slate-800 dark:text-white">
-                                                {student?.attendance?.percentage || 0}%
+                                                {displayData?.attendance?.percentage || 0}%
                                             </p>
                                         </div>
                                     </div>
@@ -176,7 +179,7 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
                                         <div>
                                             <p className="text-sm text-slate-600 dark:text-slate-400">Present Days</p>
                                             <p className="text-lg font-bold text-slate-800 dark:text-white">
-                                                {student?.attendance?.presentDays || 0}
+                                                {displayData?.attendance?.presentDays || 0}
                                             </p>
                                         </div>
                                     </div>
@@ -190,7 +193,7 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
                                         <div>
                                             <p className="text-sm text-slate-600 dark:text-slate-400">Total Days</p>
                                             <p className="text-lg font-bold text-slate-800 dark:text-white">
-                                                {student?.attendance?.totalDays || 0}
+                                                {displayData?.attendance?.totalDays || 0}
                                             </p>
                                         </div>
                                     </div>
@@ -209,28 +212,28 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
                                         <div>
                                             <p className="text-sm text-slate-600 dark:text-slate-400">Email</p>
                                             <p className="text-slate-800 dark:text-white font-medium">
-                                                {student?.userId?.email || 'N/A'}
+                                                {displayData?.userId?.email || 'N/A'}
                                             </p>
                                         </div>
                                     </div>
-                                    {student?.phone && (
+                                    {displayData?.phone && (
                                         <div className="flex items-center space-x-3">
                                             <Phone className="h-4 w-4 text-slate-500" />
                                             <div>
                                                 <p className="text-sm text-slate-600 dark:text-slate-400">Phone</p>
                                                 <p className="text-slate-800 dark:text-white font-medium">
-                                                    {student.phone}
+                                                    {displayData.phone}
                                                 </p>
                                             </div>
                                         </div>
                                     )}
-                                    {student?.address && (
+                                    {displayData?.address && (
                                         <div className="flex items-center space-x-3">
                                             <MapPin className="h-4 w-4 text-slate-500" />
                                             <div>
                                                 <p className="text-sm text-slate-600 dark:text-slate-400">Address</p>
                                                 <p className="text-slate-800 dark:text-white font-medium">
-                                                    {student.address}
+                                                    {displayData.address}
                                                 </p>
                                             </div>
                                         </div>
@@ -240,8 +243,8 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
                                         <div>
                                             <p className="text-sm text-slate-600 dark:text-slate-400">Last Login</p>
                                             <p className="text-slate-800 dark:text-white font-medium">
-                                                {student?.userId?.lastLogin
-                                                    ? new Date(student.userId.lastLogin).toLocaleDateString()
+                                                {displayData?.userId?.lastLogin
+                                                    ? new Date(displayData.userId.lastLogin).toLocaleDateString()
                                                     : 'Never'
                                                 }
                                             </p>
@@ -249,6 +252,73 @@ const StudentDetailsModal = ({ student, isOpen, onClose }) => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Guardian Information */}
+                            {displayData?.guardians?.length > 0 && (
+                                <div className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-6">
+                                    <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center">
+                                        <User className="h-5 w-5 mr-2" />
+                                        Guardian Information
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {displayData.guardians.map((guardian, index) => (
+                                            <div key={guardian._id} className="bg-white/50 dark:bg-slate-600/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                                                <div className="flex items-start space-x-4">
+                                                    {guardian.profilePhoto ? (
+                                                        <img 
+                                                            src={guardian.profilePhoto} 
+                                                            alt={guardian.fullName}
+                                                            className="h-16 w-16 rounded-xl object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold">
+                                                            {guardian.fullName?.charAt(0) || 'G'}
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <h4 className="font-semibold text-slate-800 dark:text-white">
+                                                                    {guardian.fullName}
+                                                                </h4>
+                                                                <p className="text-sm text-slate-600 dark:text-slate-300">
+                                                                    {guardian.relationship || 'Guardian'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-2 space-y-1">
+                                                            {guardian.phone && (
+                                                                <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                                                    <Phone className="h-4 w-4 mr-2 flex-shrink-0" />
+                                                                    <a href={`tel:${guardian.phone}`} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                                                                        {guardian.phone}
+                                                                    </a>
+                                                                </div>
+                                                            )}
+                                                            {guardian.email && (
+                                                                <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                                                    <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
+                                                                    <a href={`mailto:${guardian.email}`} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate">
+                                                                        {guardian.email}
+                                                                    </a>
+                                                                </div>
+                                                            )}
+                                                            {guardian.address && (
+                                                                <div className="flex items-start text-sm text-slate-600 dark:text-slate-400">
+                                                                    <MapPin className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                                                                    <span className="line-clamp-2">
+                                                                        {guardian.address}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Attendance Bar Chart */}
                             <AttendanceBarChart data={generateAttendanceData()} />
