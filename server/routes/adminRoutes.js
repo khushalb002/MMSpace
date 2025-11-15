@@ -5,6 +5,7 @@ const Mentor = require('../models/Mentor');
 const Mentee = require('../models/Mentee');
 const Group = require('../models/Group');
 const LeaveRequest = require('../models/LeaveRequest');
+const Grievance = require('../models/Grievance');
 const Attendance = require('../models/Attendance');
 const { auth } = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
@@ -21,6 +22,7 @@ router.get('/dashboard', auth, roleCheck(['admin']), async (req, res) => {
         const totalMentees = await Mentee.countDocuments();
         const totalGroups = await Group.countDocuments({ isArchived: false });
         const pendingLeaves = await LeaveRequest.countDocuments({ status: 'pending' });
+        const pendingGrievances = await Grievance.countDocuments({ status: 'pending' });
         const activeUsers = await User.countDocuments({ isActive: true });
 
         // Get recent activities
@@ -35,6 +37,11 @@ router.get('/dashboard', auth, roleCheck(['admin']), async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(5);
 
+        const recentGrievances = await Grievance.find()
+            .populate('menteeId', 'fullName studentId')
+            .sort({ createdAt: -1 })
+            .limit(5);
+
         res.json({
             stats: {
                 totalUsers,
@@ -42,10 +49,12 @@ router.get('/dashboard', auth, roleCheck(['admin']), async (req, res) => {
                 totalMentees,
                 totalGroups,
                 pendingLeaves,
+                pendingGrievances,
                 activeUsers
             },
             recentUsers,
-            recentLeaves
+            recentLeaves,
+            recentGrievances
         });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
@@ -225,20 +234,31 @@ router.put('/users/:id/toggle-status', auth, roleCheck(['admin']), async (req, r
 // @access  Private (Admin only)
 router.put('/users/:id', auth, roleCheck(['admin']), async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, password } = req.body;
 
-        const user = await User.findByIdAndUpdate(
-            req.params.id,
-            { email },
-            { new: true }
-        ).select('-password');
-
+        const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        res.json({ message: 'User updated successfully', user });
+        // Update email if provided
+        if (email) {
+            user.email = email;
+        }
+
+        // Update password if provided
+        if (password && password.trim() !== '') {
+            user.password = password;
+        }
+
+        await user.save(); // This will trigger the pre-save hook to hash the password
+
+        // Return user without password
+        const updatedUser = await User.findById(req.params.id).select('-password');
+
+        res.json({ message: 'User updated successfully', user: updatedUser });
     } catch (error) {
+        console.error('Error updating user:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -468,20 +488,28 @@ router.post('/attendance', auth, roleCheck(['admin']), async (req, res) => {
         const attendanceDate = new Date(date);
 
         for (const [menteeId, attendance] of Object.entries(attendanceData)) {
-            if (attendance[date]) {
+            if (attendance.hasOwnProperty(date)) {
                 const status = attendance[date];
 
-                // Upsert attendance record
-                await Attendance.findOneAndUpdate(
-                    { menteeId, date: attendanceDate },
-                    {
+                if (status === null || status === undefined) {
+                    // Delete attendance record when unmarking
+                    await Attendance.findOneAndDelete({
                         menteeId,
-                        date: attendanceDate,
-                        status,
-                        markedBy: req.user.id
-                    },
-                    { upsert: true, new: true }
-                );
+                        date: attendanceDate
+                    });
+                } else {
+                    // Upsert attendance record
+                    await Attendance.findOneAndUpdate(
+                        { menteeId, date: attendanceDate },
+                        {
+                            menteeId,
+                            date: attendanceDate,
+                            status,
+                            markedBy: req.user.id
+                        },
+                        { upsert: true, new: true }
+                    );
+                }
 
                 // Update mentee attendance statistics
                 const totalRecords = await Attendance.countDocuments({ menteeId });

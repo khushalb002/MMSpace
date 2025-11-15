@@ -13,7 +13,7 @@ const leaveRequestSchema = new mongoose.Schema({
     },
     leaveType: {
         type: String,
-        enum: ['sick', 'casual', 'emergency'],
+        enum: ['sick', 'casual', 'emergency', 'vacation'],
         required: true
     },
     startDate: {
@@ -42,7 +42,11 @@ const leaveRequestSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
-    reviewedAt: Date
+    reviewedAt: Date,
+    approvedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }
 }, {
     timestamps: true
 });

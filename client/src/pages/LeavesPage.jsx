@@ -282,6 +282,7 @@ const LeavesPage = () => {
                                         <option value="sick">Sick Leave</option>
                                         <option value="casual">Casual Leave</option>
                                         <option value="emergency">Emergency Leave</option>
+                                        <option value="vacation">Vacation</option>
                                     </select>
                                     {errors.leaveType && (
                                         <p className="mt-2 text-sm text-red-600">{errors.leaveType.message}</p>

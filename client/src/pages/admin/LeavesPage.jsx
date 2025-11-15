@@ -26,6 +26,8 @@ const AdminLeavesPage = () => {
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
     const [typeFilter, setTypeFilter] = useState('all')
+    const [selectedLeave, setSelectedLeave] = useState(null)
+    const [showViewModal, setShowViewModal] = useState(false)
 
     useEffect(() => {
         if (user && user.role !== 'admin') {
@@ -64,6 +66,11 @@ const AdminLeavesPage = () => {
             console.error('Error updating leave status:', error)
             toast.error('Failed to update leave status')
         }
+    }
+
+    const handleViewLeave = (leave) => {
+        setSelectedLeave(leave)
+        setShowViewModal(true)
     }
 
     const filteredLeaves = leaves.filter(leave => {
@@ -287,14 +294,7 @@ const AdminLeavesPage = () => {
                                             </span>
                                         </td>
                                         <td className="py-4 px-6 text-slate-600 dark:text-slate-400">
-                                            {leave.approvedBy ? (
-                                                <div className="text-sm">
-                                                    <div className="font-medium">{leave.approvedBy.fullName}</div>
-                                                    <div className="text-xs">{new Date(leave.updatedAt).toLocaleDateString()}</div>
-                                                </div>
-                                            ) : (
-                                                <span className="text-slate-400">-</span>
-                                            )}
+                                            {leave.approvedBy?.fullName || '-'}
                                         </td>
                                         <td className="py-4 px-6">
                                             <div className="flex space-x-2">
@@ -317,6 +317,7 @@ const AdminLeavesPage = () => {
                                                     </>
                                                 )}
                                                 <button
+                                                    onClick={() => handleViewLeave(leave)}
                                                     className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                                                     title="View Details"
                                                 >
@@ -342,6 +343,189 @@ const AdminLeavesPage = () => {
                         </div>
                     )}
                 </div>
+
+                {/* View Leave Modal */}
+                {showViewModal && selectedLeave && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center justify-between">
+                                    <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center">
+                                        <Calendar className="h-6 w-6 mr-3 text-amber-600 dark:text-amber-400" />
+                                        Leave Request Details
+                                    </h2>
+                                    <button
+                                        onClick={() => setShowViewModal(false)}
+                                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                    >
+                                        <XCircle className="h-6 w-6" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                {/* Student Info */}
+                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-700/50">
+                                    <h3 className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-3">Student Information</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Name</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {selectedLeave.menteeId?.fullName || 'N/A'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Roll No</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {selectedLeave.menteeId?.studentId || 'N/A'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Class</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {selectedLeave.menteeId?.class || 'N/A'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">Section</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {selectedLeave.menteeId?.section || 'N/A'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Leave Details */}
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Leave Type</p>
+                                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 capitalize">
+                                                {selectedLeave.leaveType}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Status</p>
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedLeave.status)}`}>
+                                                {getStatusIcon(selectedLeave.status)}
+                                                <span className="ml-1 capitalize">{selectedLeave.status}</span>
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Start Date</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {new Date(selectedLeave.startDate).toLocaleDateString('en-US', { 
+                                                    year: 'numeric', 
+                                                    month: 'long', 
+                                                    day: 'numeric' 
+                                                })}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">End Date</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {new Date(selectedLeave.endDate).toLocaleDateString('en-US', { 
+                                                    year: 'numeric', 
+                                                    month: 'long', 
+                                                    day: 'numeric' 
+                                                })}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Duration</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {selectedLeave.daysCount} day{selectedLeave.daysCount !== 1 ? 's' : ''}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Submitted On</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {new Date(selectedLeave.createdAt).toLocaleDateString('en-US', { 
+                                                    year: 'numeric', 
+                                                    month: 'long', 
+                                                    day: 'numeric' 
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Reason</p>
+                                        <p className="text-sm text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                            {selectedLeave.reason || 'No reason provided'}
+                                        </p>
+                                    </div>
+
+                                    {selectedLeave.mentorId && (
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">Assigned Mentor</p>
+                                            <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                {selectedLeave.mentorId.fullName}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {selectedLeave.approvedBy && (
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                                {selectedLeave.status === 'approved' ? 'Approved By' : 'Reviewed By'}
+                                            </p>
+                                            <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                                <p className="text-sm font-medium text-slate-800 dark:text-white">
+                                                    {selectedLeave.approvedBy.fullName}
+                                                </p>
+                                                {selectedLeave.reviewedAt && (
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {new Date(selectedLeave.reviewedAt).toLocaleDateString('en-US', {
+                                                            year: 'numeric',
+                                                            month: 'short',
+                                                            day: 'numeric'
+                                                        })}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {selectedLeave.mentorComments && (
+                                        <div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Comments</p>
+                                            <p className="text-sm text-slate-800 dark:text-white bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg">
+                                                {selectedLeave.mentorComments}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Action Buttons */}
+                                {selectedLeave.status === 'pending' && (
+                                    <div className="flex gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                        <button
+                                            onClick={() => {
+                                                handleStatusUpdate(selectedLeave._id, 'approved')
+                                                setShowViewModal(false)
+                                            }}
+                                            className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
+                                        >
+                                            <CheckCircle className="h-5 w-5 mr-2" />
+                                            Approve Leave
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                handleStatusUpdate(selectedLeave._id, 'rejected')
+                                                setShowViewModal(false)
+                                            }}
+                                            className="flex-1 py-3 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
+                                        >
+                                            <XCircle className="h-5 w-5 mr-2" />
+                                            Reject Leave
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </Layout>
     )

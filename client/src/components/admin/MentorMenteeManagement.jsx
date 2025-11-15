@@ -164,34 +164,8 @@ const MentorMenteeManagement = () => {
     }
 
     const MentorsTab = () => (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-                        <Shield className="h-6 w-6 mr-3 text-blue-600 dark:text-blue-400" />
-                        Mentors ({filteredMentors.length})
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-400 mt-1">
-                        Manage mentor profiles and their mentee assignments
-                    </p>
-                </div>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <input
-                        key="mentor-search"
-                        type="text"
-                        placeholder="Search mentors..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
-                    />
-                </div>
-            </div>
-
-            {/* Mentors Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMentors.map((mentor, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMentors.map((mentor, index) => (
                     <div
                         key={mentor._id}
                         className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border border-white/20 dark:border-slate-700/50 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
@@ -302,53 +276,11 @@ const MentorMenteeManagement = () => {
                     </div>
                 ))}
             </div>
-        </div>
     )
 
     const MenteesTab = () => (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-                        <GraduationCap className="h-6 w-6 mr-3 text-green-600 dark:text-green-400" />
-                        Mentees ({filteredMentees.length})
-                    </h3>
-                    <p className="text-slate-600 dark:text-slate-400 mt-1">
-                        Manage mentee profiles and mentor assignments
-                    </p>
-                </div>
-                <div className="flex gap-3">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                            key="mentee-search"
-                            type="text"
-                            placeholder="Search mentees..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
-                        />
-                    </div>
-                    <select
-                        value={mentorFilter}
-                        onChange={(e) => setMentorFilter(e.target.value)}
-                        className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
-                    >
-                        <option value="all">All Mentors</option>
-                        <option value="unassigned">Unassigned</option>
-                        {mentors.map(mentor => (
-                            <option key={mentor._id} value={mentor._id}>
-                                {mentor.fullName}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
-
-            {/* Mentees Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredMentees.map((mentee, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMentees.map((mentee, index) => (
                     <div
                         key={mentee._id}
                         className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border border-white/20 dark:border-slate-700/50 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
@@ -463,7 +395,6 @@ const MentorMenteeManagement = () => {
                     </div>
                 ))}
             </div>
-        </div>
     )
 
     return (
@@ -508,7 +439,76 @@ const MentorMenteeManagement = () => {
             </div>
 
             {/* Tab Content */}
-            {activeTab === 'mentors' ? <MentorsTab /> : <MenteesTab />}
+            {activeTab === 'mentors' && (
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+                                <Shield className="h-6 w-6 mr-3 text-blue-600 dark:text-blue-400" />
+                                Mentors ({filteredMentors.length})
+                            </h3>
+                            <p className="text-slate-600 dark:text-slate-400 mt-1">
+                                Manage mentor profiles and their mentee assignments
+                            </p>
+                        </div>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search mentors..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                            />
+                        </div>
+                    </div>
+                    <MentorsTab />
+                </div>
+            )}
+            
+            {activeTab === 'mentees' && (
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+                                <GraduationCap className="h-6 w-6 mr-3 text-green-600 dark:text-green-400" />
+                                Mentees ({filteredMentees.length})
+                            </h3>
+                            <p className="text-slate-600 dark:text-slate-400 mt-1">
+                                Manage mentee profiles and mentor assignments
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search mentees..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                />
+                            </div>
+                            <select
+                                value={mentorFilter}
+                                onChange={(e) => setMentorFilter(e.target.value)}
+                                className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                            >
+                                <option value="all">All Mentors</option>
+                                <option value="unassigned">Unassigned</option>
+                                {mentors.map(mentor => (
+                                    <option key={mentor._id} value={mentor._id}>
+                                        {mentor.fullName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+                    <MenteesTab />
+                </div>
+            )}
 
             {/* Assign Mentor Modal */}
             {showAssignModal && selectedMentee && (

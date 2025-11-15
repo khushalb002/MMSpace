@@ -2,6 +2,7 @@ const express = require('express');
 const LeaveRequest = require('../models/LeaveRequest');
 const Mentee = require('../models/Mentee');
 const Mentor = require('../models/Mentor');
+const Admin = require('../models/Admin');
 const { auth } = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
 const { safeFindOne, safeFind, safeSave, safeUpdate, executeWithRetry } = require('../utils/dbUtils');
@@ -140,7 +141,8 @@ router.put('/:id/approve', auth, roleCheck(['mentor', 'admin']), async (req, res
             {
                 status: 'approved',
                 mentorComments,
-                reviewedAt: new Date()
+                reviewedAt: new Date(),
+                approvedBy: req.user._id
             }
         );
 
@@ -180,7 +182,8 @@ router.put('/:id/reject', auth, roleCheck(['mentor', 'admin']), async (req, res)
             {
                 status: 'rejected',
                 mentorComments,
-                reviewedAt: new Date()
+                reviewedAt: new Date(),
+                approvedBy: req.user._id
             }
         );
 
@@ -226,9 +229,28 @@ router.get('/admin', auth, roleCheck(['admin']), async (req, res) => {
             return LeaveRequest.find(query)
                 .populate('menteeId', 'fullName studentId class section')
                 .populate('mentorId', 'fullName')
+                .populate('approvedBy', 'role')
                 .sort({ createdAt: -1 })
                 .lean();
         });
+
+        // Fetch approver names based on their role
+        for (let leave of populatedLeaves) {
+            if (leave.approvedBy) {
+                let approverProfile;
+                if (leave.approvedBy.role === 'admin') {
+                    approverProfile = await Admin.findOne({ userId: leave.approvedBy._id }).select('fullName').lean();
+                } else if (leave.approvedBy.role === 'mentor') {
+                    approverProfile = await Mentor.findOne({ userId: leave.approvedBy._id }).select('fullName').lean();
+                }
+                if (approverProfile) {
+                    leave.approvedBy = {
+                        _id: leave.approvedBy._id,
+                        fullName: approverProfile.fullName
+                    };
+                }
+            }
+        }
 
         console.log('Found', populatedLeaves.length, 'leave requests for admin');
         res.json(populatedLeaves);

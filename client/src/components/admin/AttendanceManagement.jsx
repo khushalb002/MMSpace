@@ -218,15 +218,23 @@ const AttendanceManagement = () => {
         const daysInMonth = new Date(year, month, 0).getDate()
         let present = 0
         let absent = 0
+        let markedDays = 0
 
         for (let day = 1; day <= daysInMonth; day++) {
             const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
             const status = menteeAttendance[dateStr]
-            if (status === 'present') present++
-            else if (status === 'absent') absent++
+            if (status === 'present') {
+                present++
+                markedDays++
+            } else if (status === 'absent') {
+                absent++
+                markedDays++
+            }
+            // Unmarked days are not counted in markedDays
         }
 
-        return { present, absent, total: daysInMonth, percentage: present > 0 ? ((present / (present + absent)) * 100).toFixed(1) : 0 }
+        const percentage = markedDays > 0 ? ((present / markedDays) * 100).toFixed(1) : 0
+        return { present, absent, total: markedDays, percentage }
     }
 
     const getAttendanceInsights = () => {
@@ -820,7 +828,7 @@ const AttendanceManagement = () => {
                                                                 ></div>
                                                             </div>
                                                             <span className="text-sm font-medium text-slate-800 dark:text-white">
-                                                                {currentMonthStats.percentage}%
+                                                                {currentMonthStats.percentage}% ({currentMonthStats.present}/{currentMonthStats.total})
                                                             </span>
                                                         </div>
                                                     </td>

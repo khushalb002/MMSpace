@@ -26,11 +26,13 @@ const UserManagement = () => {
     const [roleFilter, setRoleFilter] = useState('all')
     const [statusFilter, setStatusFilter] = useState('all')
     const [currentPage, setCurrentPage] = useState(1)
-    const [totalPages, setTotalPages] = useState(1)
+    const itemsPerPage = 30
     const [showAddUserModal, setShowAddUserModal] = useState(false)
     const [showCSVUpload, setShowCSVUpload] = useState(false)
     const [selectedUsers, setSelectedUsers] = useState([])
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [userToDelete, setUserToDelete] = useState(null)
     const [addFormData, setAddFormData] = useState({
         email: '',
         password: '',
@@ -54,12 +56,13 @@ const UserManagement = () => {
         class: '',
         section: '',
         phone: '',
-        role: ''
+        role: '',
+        password: ''
     })
 
     useEffect(() => {
         fetchUsers()
-    }, [currentPage, roleFilter])
+    }, [roleFilter])
 
     // Debounce search to avoid too many API calls
     // Debounced search - no need to refetch, just filter client-side
@@ -73,15 +76,12 @@ const UserManagement = () => {
         try {
             setLoading(true)
             const params = new URLSearchParams({
-                page: currentPage,
-                limit: 100, // Fetch more users for better client-side filtering
+                limit: 1000, // Fetch all users for client-side sorting and pagination
                 ...(roleFilter !== 'all' && { role: roleFilter })
-                // Removed search param - doing client-side filtering instead
             })
 
             const response = await api.get(`/admin/users?${params}`)
             setUsers(response.data.users)
-            setTotalPages(response.data.totalPages)
         } catch (error) {
             console.error('Error fetching users:', error)
             toast.error('Failed to fetch users')
@@ -101,14 +101,19 @@ const UserManagement = () => {
     }
 
     const handleDeleteUser = async (userId) => {
-        if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-            try {
-                await api.delete(`/admin/users/${userId}`)
-                toast.success('User deleted successfully')
-                fetchUsers()
-            } catch (error) {
-                toast.error('Failed to delete user')
-            }
+        setUserToDelete(userId)
+        setShowDeleteConfirm(true)
+    }
+
+    const confirmDeleteUser = async () => {
+        try {
+            await api.delete(`/admin/users/${userToDelete}`)
+            toast.success('User deleted successfully')
+            setShowDeleteConfirm(false)
+            setUserToDelete(null)
+            fetchUsers()
+        } catch (error) {
+            toast.error('Failed to delete user')
         }
     }
 
@@ -148,10 +153,10 @@ const UserManagement = () => {
     }
 
     const handleSelectAll = () => {
-        if (selectedUsers.length === filteredUsers.length) {
+        if (selectedUsers.length === paginatedUsers.length) {
             setSelectedUsers([])
         } else {
-            setSelectedUsers(filteredUsers.map(user => user._id))
+            setSelectedUsers(paginatedUsers.map(user => user._id))
         }
     }
 
@@ -166,7 +171,8 @@ const UserManagement = () => {
             class: user.profile?.class || '',
             section: user.profile?.section || '',
             phone: user.profile?.phone || '',
-            role: user.role || ''
+            role: user.role || '',
+            password: ''
         })
         setShowEditModal(true)
     }
@@ -174,10 +180,14 @@ const UserManagement = () => {
     const handleUpdateUser = async (e) => {
         e.preventDefault()
         try {
-            // Update user basic info
-            await api.put(`/admin/users/${selectedUser._id}`, {
+            // Update user basic info (including password if provided)
+            const userUpdateData = {
                 email: editFormData.email
-            })
+            }
+            if (editFormData.password && editFormData.password.trim() !== '') {
+                userUpdateData.password = editFormData.password
+            }
+            await api.put(`/admin/users/${selectedUser._id}`, userUpdateData)
 
             // Update user profile
             await api.put(`/admin/users/${selectedUser._id}/profile`, {
@@ -270,33 +280,48 @@ const UserManagement = () => {
         }
     }
 
-    const filteredUsers = users.filter(user => {
-        // Status filter
-        if (statusFilter === 'active' && !user.isActive) return false
-        if (statusFilter === 'inactive' && user.isActive) return false
+    // Filter and sort users
+    const filteredAndSortedUsers = users
+        .filter(user => {
+            // Status filter
+            if (statusFilter === 'active' && !user.isActive) return false
+            if (statusFilter === 'inactive' && user.isActive) return false
 
-        // Search filter (client-side for better UX)
-        if (searchTerm) {
-            const search = searchTerm.toLowerCase()
-            const email = user.email?.toLowerCase() || ''
-            const fullName = user.profile?.fullName?.toLowerCase() || ''
-            const studentId = user.profile?.studentId?.toLowerCase() || ''
-            const employeeId = user.profile?.employeeId?.toLowerCase() || ''
-            const department = user.profile?.department?.toLowerCase() || ''
-            const className = user.profile?.class?.toLowerCase() || ''
-            const phone = user.profile?.phone?.toLowerCase() || ''
+            // Search filter (client-side for better UX)
+            if (searchTerm) {
+                const search = searchTerm.toLowerCase()
+                const email = user.email?.toLowerCase() || ''
+                const fullName = user.profile?.fullName?.toLowerCase() || ''
+                const studentId = user.profile?.studentId?.toLowerCase() || ''
+                const employeeId = user.profile?.employeeId?.toLowerCase() || ''
+                const department = user.profile?.department?.toLowerCase() || ''
+                const className = user.profile?.class?.toLowerCase() || ''
+                const phone = user.profile?.phone?.toLowerCase() || ''
 
-            return email.includes(search) ||
-                fullName.includes(search) ||
-                studentId.includes(search) ||
-                employeeId.includes(search) ||
-                department.includes(search) ||
-                className.includes(search) ||
-                phone.includes(search)
-        }
+                return email.includes(search) ||
+                    fullName.includes(search) ||
+                    studentId.includes(search) ||
+                    employeeId.includes(search) ||
+                    department.includes(search) ||
+                    className.includes(search) ||
+                    phone.includes(search)
+            }
 
-        return true
-    })
+            return true
+        })
+        .sort((a, b) => {
+            // Sort by role: admin -> mentor -> mentee
+            const roleOrder = { admin: 0, mentor: 1, mentee: 2 }
+            const roleA = roleOrder[a.role] ?? 3
+            const roleB = roleOrder[b.role] ?? 3
+            return roleA - roleB
+        })
+
+    // Calculate pagination
+    const totalPages = Math.ceil(filteredAndSortedUsers.length / itemsPerPage)
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    const paginatedUsers = filteredAndSortedUsers.slice(startIndex, endIndex)
 
     const getRoleIcon = (role) => {
         switch (role) {
@@ -325,9 +350,10 @@ const UserManagement = () => {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-6">
+        <>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-6">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center">
@@ -416,7 +442,7 @@ const UserManagement = () => {
 
                     <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400">
                         <Filter className="h-4 w-4" />
-                        <span>{filteredUsers.length} users found</span>
+                        <span>{filteredAndSortedUsers.length} users found</span>
                     </div>
                 </div>
             </div>
@@ -427,18 +453,18 @@ const UserManagement = () => {
                 <label className="flex items-center space-x-3 cursor-pointer">
                     <input
                         type="checkbox"
-                        checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                        checked={selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0}
                         onChange={handleSelectAll}
                         className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                        Select All ({filteredUsers.length} users)
+                        Select All ({paginatedUsers.length} on this page)
                     </span>
                 </label>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredUsers.map((user, index) => (
+                {paginatedUsers.map((user, index) => (
                     <div
                         key={user._id}
                         className={`bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border ${selectedUsers.includes(user._id)
@@ -528,44 +554,8 @@ const UserManagement = () => {
                 ))}
             </div>
 
-            {/* Pagination */}
-            {totalPages > 1 && (
-                <div className="flex justify-center items-center space-x-2 mt-8">
-                    <button
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        disabled={currentPage === 1}
-                        className="px-4 py-2 bg-white/70 dark:bg-slate-800/70 border border-slate-200/50 dark:border-slate-600/50 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                    >
-                        Previous
-                    </button>
-
-                    <div className="flex space-x-1">
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                            <button
-                                key={page}
-                                onClick={() => setCurrentPage(page)}
-                                className={`px-3 py-2 rounded-xl transition-colors ${currentPage === page
-                                    ? 'bg-blue-500 text-white'
-                                    : 'bg-white/70 dark:bg-slate-800/70 border border-slate-200/50 dark:border-slate-600/50 hover:bg-slate-50 dark:hover:bg-slate-700/50'
-                                    }`}
-                            >
-                                {page}
-                            </button>
-                        ))}
-                    </div>
-
-                    <button
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        disabled={currentPage === totalPages}
-                        className="px-4 py-2 bg-white/70 dark:bg-slate-800/70 border border-slate-200/50 dark:border-slate-600/50 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                    >
-                        Next
-                    </button>
-                </div>
-            )}
-
             {/* Empty State */}
-            {filteredUsers.length === 0 && (
+            {filteredAndSortedUsers.length === 0 && (
                 <div className="text-center py-12">
                     <Users className="h-16 w-16 text-slate-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-slate-800 dark:text-white mb-2">No users found</h3>
@@ -574,6 +564,76 @@ const UserManagement = () => {
                             ? 'Try adjusting your filters to see more results.'
                             : 'Get started by adding your first user.'}
                     </p>
+                </div>
+            )}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6 px-6 py-4 bg-slate-50/50 dark:bg-slate-700/50 rounded-xl">
+                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                        Showing {startIndex + 1} to {Math.min(endIndex, filteredAndSortedUsers.length)} of {filteredAndSortedUsers.length} users
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <button
+                            onClick={() => setCurrentPage(1)}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 rounded-lg bg-white dark:bg-slate-600 text-slate-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-500 transition-colors"
+                        >
+                            First
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 rounded-lg bg-white dark:bg-slate-600 text-slate-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-500 transition-colors"
+                        >
+                            Previous
+                        </button>
+                        <div className="flex items-center space-x-1">
+                            {[...Array(totalPages)].map((_, idx) => {
+                                const pageNum = idx + 1
+                                // Show first page, last page, current page, and pages around current
+                                if (
+                                    pageNum === 1 ||
+                                    pageNum === totalPages ||
+                                    (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                                ) {
+                                    return (
+                                        <button
+                                            key={pageNum}
+                                            onClick={() => setCurrentPage(pageNum)}
+                                            className={`px-3 py-1 rounded-lg transition-colors ${
+                                                currentPage === pageNum
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-500'
+                                            }`}
+                                        >
+                                            {pageNum}
+                                        </button>
+                                    )
+                                } else if (
+                                    (pageNum === currentPage - 2 && pageNum > 1) ||
+                                    (pageNum === currentPage + 2 && pageNum < totalPages)
+                                ) {
+                                    return <span key={pageNum} className="text-slate-400">...</span>
+                                }
+                                return null
+                            })}
+                        </div>
+                        <button
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 rounded-lg bg-white dark:bg-slate-600 text-slate-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-500 transition-colors"
+                        >
+                            Next
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                            className="px-3 py-1 rounded-lg bg-white dark:bg-slate-600 text-slate-800 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-100 dark:hover:bg-slate-500 transition-colors"
+                        >
+                            Last
+                        </button>
+                    </div>
                 </div>
             )}
 
@@ -719,6 +779,23 @@ const UserManagement = () => {
                                     )}
                                 </div>
 
+                                {/* Password Field - for all roles */}
+                                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                                            New Password (optional)
+                                        </label>
+                                        <input
+                                            type="password"
+                                            value={editFormData.password}
+                                            onChange={(e) => setEditFormData(prev => ({ ...prev, password: e.target.value }))}
+                                            placeholder="Leave blank to keep current password"
+                                            className="w-full px-3 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                                        />
+                                        <p className="text-xs text-slate-500 mt-1">Enter a new password to change it, or leave blank to keep existing password</p>
+                                    </div>
+                                </div>
+
                                 <div className="flex space-x-3 mt-6">
                                     <button
                                         type="button"
@@ -739,6 +816,7 @@ const UserManagement = () => {
                     </div>
                 </div>
             )}
+            </div>
 
             {/* Add User Modal */}
             {showAddUserModal && (
@@ -927,7 +1005,83 @@ const UserManagement = () => {
                 />
             )}
 
-            {/* Bulk Delete Confirmation Modal */}
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 max-w-md w-full p-6">
+                        <div className="flex items-center space-x-3 mb-4">
+                            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white">
+                                Confirm Delete
+                            </h3>
+                        </div>
+
+                        <p className="text-slate-600 dark:text-slate-400 mb-6">
+                            Are you sure you want to delete this user?
+                            This action cannot be undone and will permanently remove all associated data.
+                        </p>
+
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteConfirm(false)
+                                    setUserToDelete(null)
+                                }}
+                                className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteUser}
+                                className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 max-w-md w-full p-6">
+                        <div className="flex items-center space-x-3 mb-4">
+                            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white">
+                                Confirm Delete
+                            </h3>
+                        </div>
+
+                        <p className="text-slate-600 dark:text-slate-400 mb-6">
+                            Are you sure you want to delete this user?
+                            This action cannot be undone and will permanently remove all associated data.
+                        </p>
+
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={() => {
+                                    setShowDeleteConfirm(false)
+                                    setUserToDelete(null)
+                                }}
+                                className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={confirmDeleteUser}
+                                className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showBulkDeleteConfirm && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 max-w-md w-full p-6">
@@ -962,7 +1116,7 @@ const UserManagement = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     )
 }
 
