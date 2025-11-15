@@ -130,6 +130,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/mentors', require('./routes/mentorRoutes'));
 app.use('/api/mentees', require('./routes/menteeRoutes'));
+app.use('/api/guardians', require('./routes/guardianRoutes'));
 app.use('/api/groups', require('./routes/groupRoutes'));
 app.use('/api/messages', require('./routes/messageRoutes'));
 app.use('/api/leaves', require('./routes/leaveRoutes'));

@@ -97,6 +97,8 @@ router.get('/', auth, async (req, res) => {
             audienceConditions.push({ targetAudience: { $in: ['mentees', 'all'] } });
         } else if (req.user.role === 'mentor') {
             audienceConditions.push({ targetAudience: { $in: ['mentors', 'all'] } });
+        } else if (req.user.role === 'guardian') {
+            audienceConditions.push({ targetAudience: { $in: ['guardians', 'mentees', 'all'] } });
         }
 
         if (req.user.role === 'mentor') {

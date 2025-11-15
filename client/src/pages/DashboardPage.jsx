@@ -6,11 +6,11 @@ import LoadingSpinner from '../components/LoadingSpinner'
 import StudentDetailsModal from '../components/StudentDetailsModal'
 import AnnouncementFeed from '../components/AnnouncementFeed'
 import api from '../services/api'
-import { Users, MessageSquare, Calendar, TrendingUp, Phone, Mail, User, Eye, FileText, Megaphone, RefreshCcw } from 'lucide-react'
+import { Users, MessageSquare, Calendar, TrendingUp, Phone, Mail, User, Eye, FileText, Megaphone, RefreshCcw, Shield } from 'lucide-react'
 import AdminDashboard from './AdminDashboard'
 
 const DashboardPage = () => {
-    const { user } = useAuth()
+    const { user, profile } = useAuth()
     const navigate = useNavigate()
     const [dashboardData, setDashboardData] = useState(null)
     const [loading, setLoading] = useState(true)
@@ -25,9 +25,20 @@ const DashboardPage = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const endpoint = user.role === 'mentor' ? '/mentors/dashboard' : '/mentees/dashboard'
-            const response = await api.get(endpoint)
-            setDashboardData(response.data)
+            let endpoint = null
+
+            if (user.role === 'mentor') {
+                endpoint = '/mentors/dashboard'
+            } else if (user.role === 'mentee') {
+                endpoint = '/mentees/dashboard'
+            } else if (user.role === 'guardian') {
+                endpoint = '/guardians/dashboard'
+            }
+
+            if (endpoint) {
+                const response = await api.get(endpoint)
+                setDashboardData(response.data)
+            }
         } catch (error) {
             console.error('Error fetching dashboard data:', error)
         } finally {
@@ -666,27 +677,255 @@ const DashboardPage = () => {
         </div>
     )
 
+    const GuardianDashboard = () => {
+        const guardianMentees = profile?.menteeIds || []
+        const stats = dashboardData?.stats || {}
+        const recentGrievances = dashboardData?.recentGrievances || []
+
+        return (
+            <div className="space-y-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Guardian Dashboard</h1>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                        Stay informed about your student's progress and communications.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+                        <div className="relative p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-emerald-100 text-sm font-medium">Linked Students</p>
+                                    <p className="text-white text-3xl font-bold mt-1">
+                                        {guardianMentees.length}
+                                    </p>
+                                    <p className="text-emerald-100 text-xs mt-1">Active connections</p>
+                                </div>
+                                <div className="bg-white/20 p-3 rounded-full">
+                                    <Users className="h-8 w-8 text-white" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+                        <div className="relative p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-orange-100 text-sm font-medium">Open Complaints</p>
+                                    <p className="text-white text-3xl font-bold mt-1">
+                                        {stats.pendingGrievances || 0}
+                                    </p>
+                                    <p className="text-orange-100 text-xs mt-1">Pending or in review</p>
+                                </div>
+                                <div className="bg-white/20 p-3 rounded-full">
+                                    <FileText className="h-8 w-8 text-white" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+                        <div className="relative p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-blue-100 text-sm font-medium">Resolved Complaints</p>
+                                    <p className="text-white text-3xl font-bold mt-1">
+                                        {stats.resolvedGrievances || 0}
+                                    </p>
+                                    <p className="text-blue-100 text-xs mt-1">Successfully addressed</p>
+                                </div>
+                                <div className="bg-white/20 p-3 rounded-full">
+                                    <Shield className="h-8 w-8 text-white" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50">
+                    <div className="px-6 py-6 sm:p-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+                                <Users className="h-6 w-6 mr-3 text-emerald-500 dark:text-emerald-300" />
+                                Your Students ({guardianMentees.length})
+                            </h3>
+                            <button
+                                onClick={() => navigate('/chat')}
+                                className="text-sm text-emerald-600 dark:text-emerald-300 hover:text-emerald-500 dark:hover:text-emerald-200 font-medium bg-emerald-50/50 dark:bg-emerald-900/20 px-3 py-2 rounded-xl transition-all duration-300"
+                            >
+                                Open Chat
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {guardianMentees.length > 0 ? guardianMentees.map((mentee, index) => (
+                                <div
+                                    key={mentee._id || index}
+                                    className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4 border border-white/20 dark:border-slate-600/30 hover:shadow-lg transition-all duration-300 message-bubble"
+                                    style={{ animationDelay: `${index * 0.1}s` }}
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center space-x-4 flex-1 min-w-0">
+                                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold shadow-lg">
+                                                {mentee.fullName?.charAt(0)}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h4 className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                                                    {mentee.fullName}
+                                                </h4>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                    ID: {mentee.studentId} • Class {mentee.class}-{mentee.section}
+                                                </p>
+                                                {mentee.mentorId && (
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                        Mentor: {mentee.mentorId.fullName}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex space-x-2 ml-4">
+                                            {mentee.mentorId && (
+                                                <button
+                                                    onClick={() => navigate(`/chat/individual_${mentee._id}`)}
+                                                    className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all duration-300 hover:scale-110"
+                                                    title="Chat with mentor"
+                                                >
+                                                    <MessageSquare className="h-4 w-4" />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => navigate('/grievances')}
+                                                className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all duration-300 hover:scale-110"
+                                                title="View grievances"
+                                            >
+                                                <FileText className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="text-center py-8">
+                                    <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                                        No linked students yet. Contact the administrator for assistance.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50">
+                    <div className="px-6 py-6 sm:p-8">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+                                <FileText className="h-6 w-6 mr-3 text-orange-500 dark:text-orange-300" />
+                                Recent Complaints
+                            </h3>
+                            <button
+                                onClick={() => navigate('/grievances')}
+                                className="text-sm text-orange-600 dark:text-orange-300 hover:text-orange-500 dark:hover:text-orange-200 font-medium bg-orange-50/50 dark:bg-orange-900/20 px-3 py-2 rounded-xl transition-all duration-300"
+                            >
+                                View All
+                            </button>
+                        </div>
+
+                        {recentGrievances.length > 0 ? (
+                            <div className="space-y-4">
+                                {recentGrievances.map((grievance, index) => (
+                                    <div
+                                        key={grievance._id}
+                                        className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4 border border-white/20 dark:border-slate-600/30 hover:shadow-lg transition-all duration-300 message-bubble"
+                                        style={{ animationDelay: `${index * 0.1}s` }}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-800 dark:text-white">
+                                                    {grievance.subject}
+                                                </p>
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                    {grievance.menteeId?.fullName} • {new Date(grievance.createdAt).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${grievance.status === 'resolved'
+                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                                : grievance.status === 'rejected'
+                                                    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                                                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                                                }`}>
+                                                {grievance.status === 'in-review' ? 'In Review' : grievance.status}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 line-clamp-2">
+                                            {grievance.description}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-8">
+                                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                                <p className="text-sm text-slate-500 dark:text-slate-400">
+                                    No complaints submitted yet.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50">
+                    <div className="px-6 py-6 sm:p-8 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+                                <Megaphone className="h-6 w-6 mr-3 text-blue-600 dark:text-blue-400" />
+                                Announcements
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={handleAnnouncementRefresh}
+                                className="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-100/60 dark:bg-slate-700/60 hover:bg-slate-200/60 dark:hover:bg-slate-600/60 transition-all duration-200 text-sm font-medium text-slate-600 dark:text-slate-300"
+                            >
+                                <RefreshCcw className="h-4 w-4" />
+                                <span>Refresh Feed</span>
+                            </button>
+                        </div>
+
+                        <AnnouncementFeed key={`guardian-${announcementRefreshKey}`} showHeader={false} />
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     if (user.role === 'admin') {
         return <AdminDashboard />
     }
 
     return (
         <Layout>
-            {showExpandedMentees ? (
-                <ExpandedMenteesView />
+            {user.role === 'mentor' ? (
+                showExpandedMentees ? <ExpandedMenteesView /> : <MentorDashboard />
+            ) : user.role === 'guardian' ? (
+                <GuardianDashboard />
             ) : (
-                user.role === 'mentor' ? <MentorDashboard /> : <MenteeDashboard />
+                <MenteeDashboard />
             )}
 
-            {/* Student Details Modal */}
-            <StudentDetailsModal
-                student={selectedStudent}
-                isOpen={showStudentModal}
-                onClose={() => {
-                    setShowStudentModal(false)
-                    setSelectedStudent(null)
-                }}
-            />
+            {user.role === 'mentor' && (
+                <StudentDetailsModal
+                    student={selectedStudent}
+                    isOpen={showStudentModal}
+                    onClose={() => {
+                        setShowStudentModal(false)
+                        setSelectedStudent(null)
+                    }}
+                />
+            )}
         </Layout>
     )
 }

@@ -67,6 +67,28 @@ module.exports = (io) => {
                 .catch(err => {
                     console.error('Error auto-joining mentee to groups:', err);
                 });
+        } else if (socket.userRole === 'guardian') {
+            const Guardian = require('../models/Guardian');
+            const Mentee = require('../models/Mentee');
+
+            Guardian.findOne({ userId: socket.userId })
+                .then(async guardian => {
+                    if (!guardian?.menteeIds?.length) {
+                        return [];
+                    }
+
+                    return Mentee.find({ _id: { $in: guardian.menteeIds } }).select('_id');
+                })
+                .then(mentees => {
+                    (mentees || []).forEach(mentee => {
+                        const roomId = mentee._id.toString();
+                        socket.join(roomId);
+                        console.log(`Guardian ${socket.userId} auto-joined mentee conversation ${roomId}`);
+                    });
+                })
+                .catch(err => {
+                    console.error('Error auto-joining guardian to mentee rooms:', err);
+                });
         }
 
         // Handle typing indicators

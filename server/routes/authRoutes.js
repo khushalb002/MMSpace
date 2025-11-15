@@ -7,6 +7,7 @@ const Admin = require('../models/Admin');
 const Mentor = require('../models/Mentor');
 const Mentee = require('../models/Mentee');
 const { auth, blacklistToken } = require('../middleware/auth');
+const Guardian = require('../models/Guardian');
 
 const router = express.Router();
 
@@ -37,7 +38,7 @@ const generateToken = (id) => {
 router.post('/register', [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
-    body('role').isIn(['admin', 'mentor', 'mentee']),
+    body('role').isIn(['admin', 'mentor', 'mentee', 'guardian']),
     body('fullName').notEmpty().trim()
 ], async (req, res) => {
     try {
@@ -79,7 +80,7 @@ router.post('/register', [
                 subjects: profileData.subjects || []
             });
             await mentor.save();
-        } else {
+        } else if (role === 'mentee') {
             // For mentees, we'll assign them to the first available mentor for now
             // In a real system, this would be handled by an admin
             const firstMentor = await Mentor.findOne();
@@ -94,6 +95,32 @@ router.post('/register', [
                 section: profileData.section || '',
                 academicYear: profileData.academicYear || new Date().getFullYear().toString()
             });
+            await mentee.save();
+        } else {
+            // Guardian registration - link to existing mentee
+            const studentId = (profileData.studentId || '').trim();
+
+            if (!studentId) {
+                return res.status(400).json({ message: 'Student ID is required for guardian registration' });
+            }
+
+            const mentee = await Mentee.findOne({ studentId });
+
+            if (!mentee) {
+                return res.status(404).json({ message: 'No mentee found with the provided student ID' });
+            }
+
+            const guardian = new Guardian({
+                userId: user._id,
+                fullName,
+                phone: (profileData.phone || '').trim(),
+                relationship: (profileData.relationship || 'Parent').trim(),
+                menteeIds: [mentee._id]
+            });
+
+            await guardian.save();
+
+            mentee.guardianIds = Array.from(new Set([...(mentee.guardianIds || []), guardian._id]));
             await mentee.save();
         }
 
@@ -215,6 +242,17 @@ router.get('/me', auth, async (req, res) => {
                     profile = await Admin.findOne({ userId: req.user._id }).lean();
                 } else if (req.user.role === 'mentor') {
                     profile = await Mentor.findOne({ userId: req.user._id }).lean();
+                } else if (req.user.role === 'guardian') {
+                    profile = await Guardian.findOne({ userId: req.user._id })
+                        .populate({
+                            path: 'menteeIds',
+                            select: 'fullName studentId class section mentorId attendance guardianIds',
+                            populate: {
+                                path: 'mentorId',
+                                select: 'fullName department phone'
+                            }
+                        })
+                        .lean();
                 } else {
                     profile = await Mentee.findOne({ userId: req.user._id })
                         .populate('mentorId', 'fullName department phone')

@@ -21,7 +21,7 @@ const announcementSchema = new mongoose.Schema({
     },
     targetAudience: {
         type: String,
-        enum: ['all', 'mentees', 'mentors'],
+        enum: ['all', 'mentees', 'mentors', 'guardians'],
         default: 'all'
     },
     priority: {
@@ -58,7 +58,7 @@ const announcementSchema = new mongoose.Schema({
         },
         userRole: {
             type: String,
-            enum: ['admin', 'mentor', 'mentee'],
+            enum: ['admin', 'mentor', 'mentee', 'guardian'],
             required: true
         },
         content: {
@@ -78,7 +78,7 @@ const announcementSchema = new mongoose.Schema({
         },
         userRole: {
             type: String,
-            enum: ['admin', 'mentor', 'mentee'],
+            enum: ['admin', 'mentor', 'mentee', 'guardian'],
             required: true
         },
         createdAt: {

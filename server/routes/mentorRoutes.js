@@ -47,6 +47,45 @@ router.get('/mentees', auth, roleCheck(['mentor']), async (req, res) => {
     }
 });
 
+// @route   GET /api/mentors/guardians
+// @desc    Get all guardians of mentees assigned to mentor
+// @access  Private (Mentor only)
+router.get('/guardians', auth, roleCheck(['mentor']), async (req, res) => {
+    try {
+        const Guardian = require('../models/Guardian');
+        
+        const mentor = await safeFindOne(Mentor, { userId: req.user._id });
+        if (!mentor) {
+            return res.status(404).json({ message: 'Mentor profile not found' });
+        }
+
+        // Get all mentees assigned to this mentor
+        const mentees = await safeFind(Mentee, { mentorId: mentor._id });
+        const menteeIds = mentees.map(m => m._id);
+
+        // Find all guardians who have at least one mentee assigned to this mentor
+        const guardians = await Guardian.find({
+            menteeIds: { $in: menteeIds }
+        })
+            .populate('userId', 'email')
+            .populate('menteeIds', 'fullName class section')
+            .lean();
+
+        // Filter to only include mentees that belong to this mentor
+        const enrichedGuardians = guardians.map(guardian => ({
+            ...guardian,
+            menteeIds: guardian.menteeIds.filter(mentee => 
+                menteeIds.some(id => id.toString() === mentee._id.toString())
+            )
+        })).filter(guardian => guardian.menteeIds.length > 0);
+
+        res.json(enrichedGuardians);
+    } catch (error) {
+        console.error('Error fetching guardians:', error);
+        res.status(500).json({ message: 'Failed to fetch guardians' });
+    }
+});
+
 // @route   PUT /api/mentors/profile
 // @desc    Update mentor profile
 // @access  Private (Mentor only)

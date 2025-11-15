@@ -44,9 +44,9 @@ const Layout = ({ children }) => {
         { name: 'Leaves', href: '/admin/leaves', icon: Calendar, roles: ['admin'] },
         { name: 'Grievances', href: '/admin/grievances', icon: FileText, roles: ['admin'] },
         { name: 'Groups', href: '/groups', icon: Users, roles: ['mentor'] },
-        { name: 'Chat', href: '/chat', icon: MessageCircle, roles: ['mentor', 'mentee'] },
+    { name: 'Chat', href: '/chat', icon: MessageCircle, roles: ['mentor', 'mentee', 'guardian'] },
         { name: 'Leaves', href: '/leaves', icon: Calendar, roles: ['mentor', 'mentee'] },
-        { name: 'Grievances', href: '/grievances', icon: FileText, roles: ['mentor', 'mentee'] },
+    { name: 'Grievances', href: '/grievances', icon: FileText, roles: ['mentor', 'mentee', 'guardian'] },
         { name: 'Profile', href: '/profile', icon: User },
     ]
 

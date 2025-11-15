@@ -11,6 +11,10 @@ const menteeSchema = new mongoose.Schema({
         ref: 'Mentor',
         required: true
     },
+    guardianIds: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Guardian'
+    }],
     fullName: {
         type: String,
         required: true

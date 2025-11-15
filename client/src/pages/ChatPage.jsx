@@ -12,6 +12,108 @@ import MenteeSelectionModal from '../components/MenteeSelectionModal'
 import AnnouncementHistory from '../components/AnnouncementHistory'
 import { toast } from 'react-hot-toast'
 
+const resolveSenderId = (sender) => {
+    if (!sender) return ''
+    if (typeof sender === 'string') return sender
+    if (typeof sender === 'object' && sender._id) return sender._id
+    return ''
+}
+
+const deriveSenderRoleFromMessage = (message) => {
+    if (!message) return undefined
+    if (message.senderRole) return message.senderRole
+    if (typeof message.senderId === 'object' && message.senderId?.role) {
+        return message.senderId.role
+    }
+    return undefined
+}
+
+const deriveSenderEmailFromMessage = (message) => {
+    if (!message) return undefined
+    if (message.senderEmail) return message.senderEmail
+    if (typeof message.senderId === 'object' && message.senderId?.email) {
+        return message.senderId.email
+    }
+    return undefined
+}
+
+const deriveSenderNameFromMessage = (message) => {
+    if (!message) return undefined
+    if (message.senderName) return message.senderName
+    if (typeof message.senderId === 'object' && message.senderId?.fullName) {
+        return message.senderId.fullName
+    }
+    return undefined
+}
+
+const deriveSenderLabelFromRole = (role) => {
+    switch (role) {
+        case 'guardian':
+            return 'Guardian'
+        case 'mentee':
+            return 'Student'
+        case 'mentor':
+            return 'Mentor'
+        case 'admin':
+            return 'Admin'
+        default:
+            return role ? role.charAt(0).toUpperCase() + role.slice(1) : undefined
+    }
+}
+
+const deriveSenderInitialFromMeta = (role, email, name) => {
+    if (name && typeof name === 'string' && name.trim().length > 0) {
+        return name.trim().charAt(0).toUpperCase()
+    }
+    if (role === 'guardian') return 'G'
+    if (role === 'mentor') return 'M'
+    if (role === 'mentee') return 'S'
+    if (role === 'admin') return 'A'
+    if (email && typeof email === 'string' && email.length > 0) {
+        return email.charAt(0).toUpperCase()
+    }
+    return '?'
+}
+
+const enrichMessage = (message) => {
+    if (!message) return message
+
+    const senderObject = typeof message.senderId === 'object' && message.senderId !== null
+        ? message.senderId
+        : null
+
+    const senderId = resolveSenderId(message.senderId)
+    const senderRole = deriveSenderRoleFromMessage(message)
+    const senderEmail = deriveSenderEmailFromMessage(message)
+    const senderName = deriveSenderNameFromMessage(message)
+    const senderInitial = message.senderInitial || deriveSenderInitialFromMeta(senderRole, senderEmail, senderName)
+    const senderLabel = message.senderLabel || deriveSenderLabelFromRole(senderRole)
+
+    return {
+        ...message,
+        senderId,
+        senderRole,
+        senderEmail,
+        senderName,
+        senderInitial,
+        senderLabel,
+        senderUser: senderObject
+    }
+}
+
+const getSenderBadgeClasses = (role) => {
+    switch (role) {
+        case 'guardian':
+            return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+        case 'mentor':
+            return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+        case 'mentee':
+            return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+        default:
+            return 'bg-slate-100 text-slate-600 dark:bg-slate-700/40 dark:text-slate-200'
+    }
+}
+
 const ModernChatPage = () => {
     const { id: conversationId } = useParams()
     const { user, profile } = useAuth()
@@ -41,6 +143,16 @@ const ModernChatPage = () => {
     const [conversationActionLoading, setConversationActionLoading] = useState(false)
     const messagesEndRef = useRef(null)
     const fileInputRef = useRef(null)
+
+    const latestGuardianMessage = useMemo(() => {
+        for (let i = messages.length - 1; i >= 0; i -= 1) {
+            const candidate = messages[i]
+            if (candidate?.senderRole === 'guardian' && candidate?.senderName) {
+                return candidate
+            }
+        }
+        return null
+    }, [messages])
 
     const mergeAnnouncementComment = (announcementList, announcementId, comment) => {
         return announcementList.map(announcement => {
@@ -188,6 +300,65 @@ const ModernChatPage = () => {
                 })
                 conversationList = [...conversationList, ...individualChats]
 
+                // Add separate guardian conversations
+                try {
+                    const guardiansResponse = await api.get('/mentors/guardians')
+                    const guardianChats = guardiansResponse.data.map(guardian => {
+                        const conversationId = `guardian_${guardian._id}`
+                        const menteeNames = guardian.menteeIds?.map(m => m.fullName).join(', ') || 'Guardian'
+                        return {
+                            _id: conversationId,
+                            type: 'guardian',
+                            displayName: guardian.fullName,
+                            subtitle: `Guardian: ${menteeNames}`,
+                            guardianId: guardian._id,
+                            color: '#F59E0B'
+                        }
+                    })
+                    conversationList = [...conversationList, ...guardianChats]
+                } catch (error) {
+                    console.error('Error fetching guardians:', error)
+                }
+
+            } else if (user.role === 'guardian') {
+                // Fetch guardian profile to get guardian ID
+                const guardianProfileResponse = await api.get('/guardians/profile')
+                const guardianProfile = guardianProfileResponse.data
+                
+                if (guardianProfile && guardianProfile._id) {
+                    const menteesResponse = await api.get('/guardians/mentees')
+                    const mentees = Array.isArray(menteesResponse.data) ? menteesResponse.data : []
+                    
+                    // Get unique mentors from mentees
+                    const mentorMap = new Map()
+                    mentees.forEach(mentee => {
+                        if (mentee.mentorId && mentee.mentorId._id) {
+                            if (!mentorMap.has(mentee.mentorId._id)) {
+                                mentorMap.set(mentee.mentorId._id, {
+                                    mentor: mentee.mentorId,
+                                    mentees: []
+                                })
+                            }
+                            mentorMap.get(mentee.mentorId._id).mentees.push(mentee)
+                        }
+                    })
+                    
+                    // Create one guardian conversation per mentor
+                    const guardianChats = Array.from(mentorMap.values()).map(({ mentor, mentees: menteesForMentor }) => {
+                        const conversationId = `guardian_${guardianProfile._id}`
+                        const menteeNames = menteesForMentor.map(m => m.fullName).join(', ')
+                        return {
+                            _id: conversationId,
+                            type: 'guardian',
+                            displayName: mentor.fullName || 'Assigned Mentor',
+                            subtitle: `About: ${menteeNames}`,
+                            guardianId: guardianProfile._id,
+                            color: '#14B8A6'
+                        }
+                    })
+
+                    conversationList = guardianChats
+                }
             } else {
                 // For mentees, show groups they belong to and chat with their mentor
                 try {
@@ -253,32 +424,44 @@ const ModernChatPage = () => {
 
             if (conversationType === 'group') {
                 endpoint = `/messages/group/${currentConversationId}`
+            } else if (conversationType === 'guardian') {
+                currentConversationId = currentConversationId.replace('guardian_', '')
+                endpoint = `/messages/guardian/${currentConversationId}`
             } else {
                 currentConversationId = currentConversationId.replace('individual_', '')
                 endpoint = `/messages/individual/${currentConversationId}`
             }
             const response = await api.get(endpoint)
-            setMessages(response.data)
+            const normalizedMessages = Array.isArray(response.data)
+                ? response.data.map(enrichMessage)
+                : []
+            setMessages(normalizedMessages)
         } catch (error) {
             console.error('Error fetching messages:', error)
         }
     }
 
     const handleNewMessage = (message) => {
-        console.log('Received new message:', message)
+        const incomingMessage = enrichMessage(message)
+
+        console.log('Received new message:', incomingMessage)
         console.log('Current selected conversation:', selectedConversation?._id)
-        console.log('Message conversation ID:', message.conversationId)
+        console.log('Message conversation ID:', incomingMessage.conversationId)
 
         // Only add message if it belongs to the current conversation
         if (selectedConversation) {
             let shouldAddMessage = false
 
             if (selectedConversation.type === 'group') {
-                shouldAddMessage = message.conversationId === selectedConversation._id
+                shouldAddMessage = incomingMessage.conversationId === selectedConversation._id
+            } else if (selectedConversation.type === 'guardian') {
+                // For guardian chats, check if the message belongs to this guardian conversation
+                const actualConversationId = selectedConversation._id.replace('guardian_', '')
+                shouldAddMessage = incomingMessage.conversationId === actualConversationId
             } else {
                 // For individual chats, check if the message belongs to this conversation
                 const actualConversationId = selectedConversation._id.replace('individual_', '')
-                shouldAddMessage = message.conversationId === actualConversationId
+                shouldAddMessage = incomingMessage.conversationId === actualConversationId
             }
 
             if (!shouldAddMessage) {
@@ -289,7 +472,7 @@ const ModernChatPage = () => {
 
         setMessages(prev => {
             // Check if message already exists to prevent duplicates
-            const messageExists = prev.some(msg => msg._id === message._id)
+            const messageExists = prev.some(msg => msg._id === incomingMessage._id)
             if (messageExists) {
                 console.log('Message already exists, skipping')
                 return prev
@@ -299,21 +482,21 @@ const ModernChatPage = () => {
             // replace the optimistic message instead of adding a duplicate
             const optimisticIndex = prev.findIndex(msg =>
                 msg.isOptimistic &&
-                msg.senderId === message.senderId &&
-                msg.content === message.content &&
-                Math.abs(new Date(msg.createdAt) - new Date(message.createdAt)) < 5000 // Within 5 seconds
+                msg.senderId === incomingMessage.senderId &&
+                msg.content === incomingMessage.content &&
+                Math.abs(new Date(msg.createdAt) - new Date(incomingMessage.createdAt)) < 5000 // Within 5 seconds
             )
 
             if (optimisticIndex !== -1) {
                 // Replace optimistic message with real message
                 const newMessages = [...prev]
-                newMessages[optimisticIndex] = message
+                newMessages[optimisticIndex] = incomingMessage
                 console.log('Replaced optimistic message with real message')
                 return newMessages
             }
 
             console.log('Adding new message to chat')
-            return [...prev, message]
+            return [...prev, incomingMessage]
         })
     }
 
@@ -329,6 +512,10 @@ const ModernChatPage = () => {
             _id: `temp_${Date.now()}`,
             content: messageContent,
             senderId: user.id,
+            senderRole: user.role,
+            senderName: profile?.fullName,
+            senderInitial: deriveSenderInitialFromMeta(user.role, user?.email, profile?.fullName),
+            senderLabel: deriveSenderLabelFromRole(user.role),
             createdAt: new Date().toISOString(),
             isOptimistic: true
         }
@@ -342,6 +529,8 @@ const ModernChatPage = () => {
             // For individual chats, extract the actual ID
             if (conversationType === 'individual') {
                 actualConversationId = selectedConversation._id.replace('individual_', '')
+            } else if (conversationType === 'guardian') {
+                actualConversationId = selectedConversation._id.replace('guardian_', '')
             }
 
             const messageData = {
@@ -354,8 +543,9 @@ const ModernChatPage = () => {
             console.log('Message sent successfully:', response.data._id)
 
             // Replace optimistic message with real message
+            const savedMessage = enrichMessage(response.data)
             setMessages(prev => prev.map(msg =>
-                msg._id === optimisticMessage._id ? response.data : msg
+                msg._id === optimisticMessage._id ? savedMessage : msg
             ))
         } catch (error) {
             // Remove optimistic message on error
@@ -646,6 +836,7 @@ const ModernChatPage = () => {
                                                 <option value="all">Everyone</option>
                                                 <option value="mentees">Mentees</option>
                                                 <option value="mentors">Mentors</option>
+                                                <option value="guardians">Guardians</option>
                                             </select>
                                         </div>
                                     </div>
@@ -904,40 +1095,64 @@ const ModernChatPage = () => {
 
                             {/* Messages Area */}
                             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-transparent to-white/30 dark:to-slate-800/30 relative z-10">
-                                {messages.map((message, index) => (
-                                    <div
-                                        key={message._id}
-                                        className={`flex ${message.senderId === user.id ? 'justify-end' : 'justify-start'} animate-slideInUp`}
-                                        style={{ animationDelay: `${index * 0.05}s` }}
-                                    >
-                                        <div className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${message.senderId === user.id ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                                            {message.senderId !== user.id && (
-                                                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white text-xs font-bold shadow-md">
-                                                    {message.senderId?.charAt(0)?.toUpperCase() || '?'}
-                                                </div>
-                                            )}
-                                            <div
-                                                className={`px-4 py-3 rounded-3xl shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl ${message.senderId === user.id
-                                                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-br-lg'
-                                                    : 'bg-white/80 dark:bg-slate-700/80 text-slate-800 dark:text-white rounded-bl-lg border border-white/20 dark:border-slate-600/30'
-                                                    } ${message.isOptimistic ? 'opacity-70 animate-pulse' : ''}`}
-                                            >
-                                                <p className="text-sm leading-relaxed">{message.content}</p>
-                                                <div className="flex items-center justify-between mt-2">
-                                                    <p className={`text-xs ${message.senderId === user.id
-                                                        ? 'text-blue-100'
-                                                        : 'text-slate-500 dark:text-slate-400'
-                                                        }`}>
-                                                        {formatTime(message.createdAt)}
-                                                    </p>
-                                                    {message.senderId === user.id && !message.isOptimistic && (
-                                                        <div className="text-blue-200 text-xs">✓</div>
+                                {messages.map((message, index) => {
+                                    const isOwnMessage = message.senderId === user.id
+                                    const badgeClasses = !isOwnMessage && message.senderRole
+                                        ? getSenderBadgeClasses(message.senderRole)
+                                        : ''
+                                    const badgeTextParts = []
+                                    // Only show badges in group conversations
+                                    if (!isOwnMessage && conversationType === 'group') {
+                                        // For group chats, show label and name to identify different members
+                                        if (message.senderLabel) {
+                                            badgeTextParts.push(message.senderLabel)
+                                        }
+                                        if (message.senderName) {
+                                            badgeTextParts.push(message.senderName)
+                                        }
+                                    }
+                                    const badgeText = badgeTextParts.join(' • ')
+
+                                    return (
+                                        <div
+                                            key={message._id}
+                                            className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} animate-slideInUp`}
+                                            style={{ animationDelay: `${index * 0.05}s` }}
+                                        >
+                                            <div className={`flex items-end space-x-2 max-w-xs lg:max-w-md ${isOwnMessage ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                                                {!isOwnMessage && (
+                                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white text-xs font-bold shadow-md">
+                                                        {message.senderInitial || '?'}
+                                                    </div>
+                                                )}
+                                                <div
+                                                    className={`px-4 py-3 rounded-3xl shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl ${isOwnMessage
+                                                        ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-br-lg'
+                                                        : 'bg-white/80 dark:bg-slate-700/80 text-slate-800 dark:text-white rounded-bl-lg border border-white/20 dark:border-slate-600/30'
+                                                        } ${message.isOptimistic ? 'opacity-70 animate-pulse' : ''}`}
+                                                >
+                                                    {!isOwnMessage && badgeText && (
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide mb-2 gap-1 ${badgeClasses}`}>
+                                                            {badgeText}
+                                                        </span>
                                                     )}
+                                                    <p className="text-sm leading-relaxed">{message.content}</p>
+                                                    <div className="flex items-center justify-between mt-2">
+                                                        <p className={`text-xs ${isOwnMessage
+                                                            ? 'text-blue-100'
+                                                            : 'text-slate-500 dark:text-slate-400'
+                                                            }`}>
+                                                            {formatTime(message.createdAt)}
+                                                        </p>
+                                                        {isOwnMessage && !message.isOptimistic && (
+                                                            <div className="text-blue-200 text-xs">✓</div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    )
+                                })}
                                 <div ref={messagesEndRef} />
                             </div>
 
@@ -1034,7 +1249,9 @@ const ModernChatPage = () => {
                                 <p className="text-slate-500 dark:text-slate-400 max-w-md">
                                     {user.role === 'mentor'
                                         ? 'Choose a conversation from the sidebar to start messaging'
-                                        : 'Your conversations will appear here. Contact your mentor to get started!'
+                                        : user.role === 'guardian'
+                                            ? 'Your conversations will appear here once a mentor is linked to your student.'
+                                            : 'Your conversations will appear here. Contact your mentor to get started!'
                                     }
                                 </p>
                             </div>

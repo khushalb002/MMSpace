@@ -2,6 +2,7 @@ const express = require('express');
 const Grievance = require('../models/Grievance');
 const Mentee = require('../models/Mentee');
 const Mentor = require('../models/Mentor');
+const Guardian = require('../models/Guardian');
 const { auth } = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
 const { safeFindOne, safeFind, safeSave, safeUpdate, executeWithRetry } = require('../utils/dbUtils');
@@ -86,13 +87,66 @@ router.get('/mentee', auth, roleCheck(['mentee']), async (req, res) => {
         }
 
         const grievances = await safeFind(Grievance, query, {
-            sort: { createdAt: -1 }
+            sort: { createdAt: -1 },
+            populate: {
+                path: 'menteeId',
+                select: 'fullName studentId class section'
+            }
         });
 
         console.log('Found', grievances.length, 'grievances for mentee');
         res.json(grievances);
     } catch (error) {
         console.error('Error fetching mentee grievances:', error);
+        res.status(500).json({ message: 'Failed to fetch grievances', error: error.message });
+    }
+});
+
+// @route   GET /api/grievances/guardian
+// @desc    Get grievances for guardian's mentees
+// @access  Private (Guardian only)
+router.get('/guardian', auth, roleCheck(['guardian']), async (req, res) => {
+    try {
+        const guardian = await safeFindOne(Guardian, { userId: req.user._id });
+
+        if (!guardian) {
+            return res.status(404).json({ message: 'Guardian profile not found' });
+        }
+
+        if (!guardian.menteeIds || guardian.menteeIds.length === 0) {
+            return res.json([]);
+        }
+
+        const { status } = req.query;
+        const query = {
+            menteeId: { $in: guardian.menteeIds }
+        };
+
+        if (status && status !== 'all') {
+            query.status = status;
+        }
+
+        const grievances = await safeFind(Grievance, query, {
+            sort: { createdAt: -1 },
+            populate: [
+                {
+                    path: 'menteeId',
+                    select: 'fullName studentId class section mentorId',
+                    populate: {
+                        path: 'mentorId',
+                        select: 'fullName phone'
+                    }
+                },
+                {
+                    path: 'mentorId',
+                    select: 'fullName'
+                }
+            ]
+        });
+
+        res.json(grievances);
+    } catch (error) {
+        console.error('Error fetching guardian grievances:', error);
         res.status(500).json({ message: 'Failed to fetch grievances', error: error.message });
     }
 });
