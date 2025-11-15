@@ -137,6 +137,7 @@ app.use('/api/leaves', require('./routes/leaveRoutes'));
 app.use('/api/grievances', require('./routes/grievanceRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
+app.use('/api/csv', require('./routes/csvUploadRoutes'));
 
 // Health check
 app.get('/api/health', async (req, res) => {
@@ -162,8 +163,8 @@ app.get('/api/health', async (req, res) => {
 
 // Health check endpoint for Render
 app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'healthy', 
+    res.status(200).json({
+        status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: process.uptime()
     });

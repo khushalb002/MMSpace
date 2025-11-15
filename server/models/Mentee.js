@@ -9,7 +9,8 @@ const menteeSchema = new mongoose.Schema({
     mentorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Mentor',
-        required: true
+        required: false,
+        default: null
     },
     guardianIds: [{
         type: mongoose.Schema.Types.ObjectId,

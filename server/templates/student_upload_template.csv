@@ -1,0 +1,5 @@
+rollNo,fullName,studentEmail,studentPhone,parentsPhone,parentsEmail,mentorEmail,class,section
+STU001,John Doe,john.doe@example.com,9876543210,9876543211,parent1@example.com,mentor@example.com,10,A
+STU002,Jane Smith,jane.smith@example.com,9876543212,9876543213,parent2@example.com,mentor@example.com,10,A
+STU003,Mike Johnson,mike.johnson@example.com,9876543214,9876543215,parent3@example.com,mentor@example.com,10,B
+STU004,Sarah Williams,sarah.williams@example.com,9876543216,9876543217,parent4@example.com,mentor@example.com,11,A

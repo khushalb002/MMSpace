@@ -11,11 +11,13 @@ import {
     Eye,
     Shield,
     GraduationCap,
-    User
+    User,
+    Upload
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import api from '../../services/api'
 import LoadingSpinner from '../LoadingSpinner'
+import CSVUpload from './CSVUpload'
 
 const UserManagement = () => {
     const [users, setUsers] = useState([])
@@ -26,6 +28,9 @@ const UserManagement = () => {
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [showAddUserModal, setShowAddUserModal] = useState(false)
+    const [showCSVUpload, setShowCSVUpload] = useState(false)
+    const [selectedUsers, setSelectedUsers] = useState([])
+    const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false)
     const [addFormData, setAddFormData] = useState({
         email: '',
         password: '',
@@ -105,6 +110,49 @@ const UserManagement = () => {
             } catch (error) {
                 toast.error('Failed to delete user')
             }
+        }
+    }
+
+    const handleBulkDelete = async () => {
+        if (selectedUsers.length === 0) {
+            toast.error('No users selected')
+            return
+        }
+
+        setShowBulkDeleteConfirm(false)
+
+        try {
+            const deletePromises = selectedUsers.map(userId =>
+                api.delete(`/admin/users/${userId}`)
+            )
+
+            await Promise.all(deletePromises)
+
+            toast.success(`Successfully deleted ${selectedUsers.length} user(s)`)
+            setSelectedUsers([])
+            fetchUsers()
+        } catch (error) {
+            console.error('Bulk delete error:', error)
+            toast.error('Failed to delete some users')
+            fetchUsers() // Refresh to show which ones were deleted
+        }
+    }
+
+    const handleSelectUser = (userId) => {
+        setSelectedUsers(prev => {
+            if (prev.includes(userId)) {
+                return prev.filter(id => id !== userId)
+            } else {
+                return [...prev, userId]
+            }
+        })
+    }
+
+    const handleSelectAll = () => {
+        if (selectedUsers.length === filteredUsers.length) {
+            setSelectedUsers([])
+        } else {
+            setSelectedUsers(filteredUsers.map(user => user._id))
         }
     }
 
@@ -269,14 +317,47 @@ const UserManagement = () => {
                             Manage all system users, their roles, and permissions
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowAddUserModal(true)}
-                        className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                    >
-                        <UserPlus className="h-5 w-5 mr-2" />
-                        Add New User
-                    </button>
+                    <div className="flex flex-wrap gap-3">
+                        {selectedUsers.length > 0 && (
+                            <button
+                                onClick={() => setShowBulkDeleteConfirm(true)}
+                                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            >
+                                <Trash2 className="h-5 w-5 mr-2" />
+                                Delete Selected ({selectedUsers.length})
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setShowCSVUpload(true)}
+                            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                            <Upload className="h-5 w-5 mr-2" />
+                            Bulk Upload CSV
+                        </button>
+                        <button
+                            onClick={() => setShowAddUserModal(true)}
+                            className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
+                            <UserPlus className="h-5 w-5 mr-2" />
+                            Add New User
+                        </button>
+                    </div>
                 </div>
+
+                {/* Selection Info */}
+                {selectedUsers.length > 0 && (
+                    <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                            <strong>{selectedUsers.length}</strong> user(s) selected
+                            <button
+                                onClick={() => setSelectedUsers([])}
+                                className="ml-4 text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                                Clear selection
+                            </button>
+                        </p>
+                    </div>
+                )}
 
                 {/* Filters */}
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -320,16 +401,41 @@ const UserManagement = () => {
             </div>
 
             {/* Users Grid */}
+            {/* Select All Checkbox */}
+            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border border-white/20 dark:border-slate-700/50 p-4 mb-4">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                    <input
+                        type="checkbox"
+                        checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
+                        onChange={handleSelectAll}
+                        className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        Select All ({filteredUsers.length} users)
+                    </span>
+                </label>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {filteredUsers.map((user, index) => (
                     <div
                         key={user._id}
-                        className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border border-white/20 dark:border-slate-700/50 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
+                        className={`bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border ${selectedUsers.includes(user._id)
+                            ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/50'
+                            : 'border-white/20 dark:border-slate-700/50'
+                            } hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden`}
                         style={{ animationDelay: `${index * 0.1}s` }}
                     >
                         {/* User Header */}
                         <div className={`bg-gradient-to-r ${getRoleColor(user.role)} p-4`}>
                             <div className="flex items-center space-x-3">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedUsers.includes(user._id)}
+                                    onChange={() => handleSelectUser(user._id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-5 w-5 rounded border-white/50 text-white bg-white/20 focus:ring-white/50 cursor-pointer"
+                                />
                                 <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
                                     {getRoleIcon(user.role)}
                                 </div>
@@ -784,6 +890,53 @@ const UserManagement = () => {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CSV Upload Modal */}
+            {showCSVUpload && (
+                <CSVUpload
+                    onClose={() => setShowCSVUpload(false)}
+                    onSuccess={(results) => {
+                        setShowCSVUpload(false)
+                        fetchUsers() // Refresh user list
+                    }}
+                />
+            )}
+
+            {/* Bulk Delete Confirmation Modal */}
+            {showBulkDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 max-w-md w-full p-6">
+                        <div className="flex items-center space-x-3 mb-4">
+                            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                                <Trash2 className="h-6 w-6 text-red-600 dark:text-red-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-white">
+                                Confirm Bulk Delete
+                            </h3>
+                        </div>
+
+                        <p className="text-slate-600 dark:text-slate-400 mb-6">
+                            Are you sure you want to delete <strong>{selectedUsers.length}</strong> user(s)?
+                            This action cannot be undone and will permanently remove all associated data.
+                        </p>
+
+                        <div className="flex space-x-3">
+                            <button
+                                onClick={() => setShowBulkDeleteConfirm(false)}
+                                className="flex-1 px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-white rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleBulkDelete}
+                                className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                            >
+                                Delete All
+                            </button>
                         </div>
                     </div>
                 </div>
