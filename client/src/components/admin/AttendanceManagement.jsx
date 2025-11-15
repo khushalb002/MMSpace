@@ -95,10 +95,8 @@ const AttendanceManagement = () => {
             const date = new Date(selectedDate)
             const month = date.getMonth() + 1
             const year = date.getFullYear()
-            console.log('Fetching attendance for month:', month, 'year:', year)
             const response = await api.get(`/admin/attendance?month=${month}&year=${year}`)
             setCurrentMonthAttendance(response.data)
-            console.log('Current month attendance updated:', response.data)
         } catch (error) {
             console.error('Error fetching current month attendance:', error)
         }
@@ -228,9 +226,7 @@ const AttendanceManagement = () => {
             else if (status === 'absent') absent++
         }
 
-        const percentage = present > 0 ? ((present / (present + absent)) * 100).toFixed(1) : 0
-        console.log(`Stats for mentee ${menteeId} - Month: ${month}/${year}, Present: ${present}, Absent: ${absent}, %: ${percentage}`)
-        return { present, absent, total: daysInMonth, percentage }
+        return { present, absent, total: daysInMonth, percentage: present > 0 ? ((present / (present + absent)) * 100).toFixed(1) : 0 }
     }
 
     const getAttendanceInsights = () => {

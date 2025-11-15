@@ -544,4 +544,36 @@ router.get('/attendance/stats/:menteeId', auth, roleCheck(['admin']), async (req
     }
 });
 
+// @route   PUT /api/admin/profile
+// @desc    Update admin profile
+// @access  Private (Admin only)
+router.put('/profile', auth, roleCheck(['admin']), async (req, res) => {
+    try {
+        const { fullName, phone, department, position } = req.body;
+
+        const admin = await Admin.findOne({ userId: req.user.id });
+        if (!admin) {
+            return res.status(404).json({ message: 'Admin profile not found' });
+        }
+
+        // Update admin fields
+        if (fullName) admin.fullName = fullName;
+        if (phone) admin.phone = phone;
+        if (department) admin.department = department;
+        if (position) admin.position = position;
+
+        await admin.save();
+
+        // Update user email if provided in request body
+        if (req.body.email && req.body.email !== req.user.email) {
+            await User.findByIdAndUpdate(req.user.id, { email: req.body.email });
+        }
+
+        res.json({ message: 'Profile updated successfully', admin });
+    } catch (error) {
+        console.error('Error updating admin profile:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;

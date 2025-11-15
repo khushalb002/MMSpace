@@ -13,6 +13,9 @@ const ProfilePage = () => {
     const [formData, setFormData] = useState({
         email: '',
         phone: '',
+        fullName: '',
+        department: '',
+        position: '',
         qualifications: '',
         citations: ''
     })
@@ -20,12 +23,22 @@ const ProfilePage = () => {
     // Initialize form data only when profile/user data is first loaded, never during edit mode
     useEffect(() => {
         if (profile && user && !editMode) {
-            setFormData({
-                email: user.email || '',
-                phone: profile.phone || '',
-                qualifications: profile.qualifications || '',
-                citations: profile.citations || ''
-            })
+            if (user.role === 'admin') {
+                setFormData({
+                    email: user.email || '',
+                    phone: profile.phone || '',
+                    fullName: profile.fullName || '',
+                    department: profile.department || '',
+                    position: profile.position || ''
+                })
+            } else {
+                setFormData({
+                    email: user.email || '',
+                    phone: profile.phone || '',
+                    qualifications: profile.qualifications || '',
+                    citations: profile.citations || ''
+                })
+            }
         }
     }, [profile?.id, user?.id]) // Removed editMode dependency to prevent interference
 
@@ -35,20 +48,32 @@ const ProfilePage = () => {
 
     const handleCancel = useCallback(() => {
         setEditMode(false)
-        setFormData({
-            email: user.email || '',
-            phone: profile.phone || '',
-            qualifications: profile.qualifications || '',
-            citations: profile.citations || ''
-        })
-    }, [user?.email, profile?.phone, profile?.qualifications, profile?.citations])
+        if (user.role === 'admin') {
+            setFormData({
+                email: user.email || '',
+                phone: profile.phone || '',
+                fullName: profile.fullName || '',
+                department: profile.department || '',
+                position: profile.position || ''
+            })
+        } else {
+            setFormData({
+                email: user.email || '',
+                phone: profile.phone || '',
+                qualifications: profile.qualifications || '',
+                citations: profile.citations || ''
+            })
+        }
+    }, [user?.email, user?.role, profile?.phone, profile?.fullName, profile?.department, profile?.position, profile?.qualifications, profile?.citations])
 
     const handleSave = async () => {
-        if (user.role !== 'mentor') return
-
         setLoading(true)
         try {
-            await api.put('/mentors/profile', formData)
+            if (user.role === 'mentor') {
+                await api.put('/mentors/profile', formData)
+            } else if (user.role === 'admin') {
+                await api.put('/admin/profile', formData)
+            }
             await refreshProfile()
             setEditMode(false)
             toast.success('Profile updated successfully!')
@@ -561,6 +586,172 @@ const ProfilePage = () => {
         )
     }
 
+    const AdminProfile = useMemo(() => (
+        <div className="space-y-8">
+            {/* Profile Header */}
+            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-6">
+                        <div className="flex-shrink-0">
+                            <div className="h-24 w-24 rounded-3xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-2xl">
+                                <span className="text-3xl font-bold text-white">
+                                    {profile.fullName?.charAt(0)}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-3xl font-bold text-slate-800 dark:text-white">{profile.fullName}</h1>
+                            <p className="text-lg text-slate-600 dark:text-slate-300 capitalize font-medium">{user.role}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Employee ID: {profile.employeeId}</p>
+                        </div>
+                    </div>
+                    <div className="flex space-x-3">
+                        {!editMode ? (
+                            <button
+                                onClick={handleEdit}
+                                className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105"
+                            >
+                                <Edit2 className="h-5 w-5" />
+                                <span>Edit Profile</span>
+                            </button>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={handleSave}
+                                    disabled={loading}
+                                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                                >
+                                    <Save className="h-5 w-5" />
+                                    <span>{loading ? 'Saving...' : 'Save'}</span>
+                                </button>
+                                <button
+                                    onClick={handleCancel}
+                                    disabled={loading}
+                                    className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 hover:scale-105 disabled:opacity-50"
+                                >
+                                    <X className="h-5 w-5" />
+                                    <span>Cancel</span>
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Information Cards */}
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                {/* Contact Information */}
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Contact Information</h3>
+                    <div className="space-y-6">
+                        <div className="flex items-start space-x-4">
+                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                                <Mail className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <dt className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Email</dt>
+                                {editMode ? (
+                                    <input
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(e) => handleInputChange('email', e.target.value)}
+                                        className="w-full px-4 py-2 bg-white/50 dark:bg-slate-600/50 border border-slate-300 dark:border-slate-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-white"
+                                        placeholder="Enter email"
+                                    />
+                                ) : (
+                                    <dd className="text-lg font-medium text-slate-800 dark:text-white">{user.email}</dd>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-start space-x-4">
+                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                                <Phone className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <dt className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Phone</dt>
+                                {editMode ? (
+                                    <input
+                                        type="tel"
+                                        value={formData.phone}
+                                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                                        className="w-full px-4 py-2 bg-white/50 dark:bg-slate-600/50 border border-slate-300 dark:border-slate-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-white"
+                                        placeholder="Enter phone number"
+                                    />
+                                ) : (
+                                    <dd className="text-lg font-medium text-slate-800 dark:text-white">{profile.phone || 'Not provided'}</dd>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-start space-x-4">
+                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                                <User className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <dt className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Full Name</dt>
+                                {editMode ? (
+                                    <input
+                                        type="text"
+                                        value={formData.fullName}
+                                        onChange={(e) => handleInputChange('fullName', e.target.value)}
+                                        className="w-full px-4 py-2 bg-white/50 dark:bg-slate-600/50 border border-slate-300 dark:border-slate-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-white"
+                                        placeholder="Enter full name"
+                                    />
+                                ) : (
+                                    <dd className="text-lg font-medium text-slate-800 dark:text-white">{profile.fullName}</dd>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Professional Information */}
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Professional Information</h3>
+                    <div className="space-y-6">
+                        <div className="flex items-start space-x-4">
+                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                                <Building className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <dt className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Department</dt>
+                                {editMode ? (
+                                    <input
+                                        type="text"
+                                        value={formData.department}
+                                        onChange={(e) => handleInputChange('department', e.target.value)}
+                                        className="w-full px-4 py-2 bg-white/50 dark:bg-slate-600/50 border border-slate-300 dark:border-slate-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-white"
+                                        placeholder="Enter department"
+                                    />
+                                ) : (
+                                    <dd className="text-lg font-medium text-slate-800 dark:text-white">{profile.department}</dd>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-start space-x-4">
+                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                                <BookOpen className="h-6 w-6 text-white" />
+                            </div>
+                            <div className="flex-1">
+                                <dt className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">Position</dt>
+                                {editMode ? (
+                                    <input
+                                        type="text"
+                                        value={formData.position}
+                                        onChange={(e) => handleInputChange('position', e.target.value)}
+                                        className="w-full px-4 py-2 bg-white/50 dark:bg-slate-600/50 border border-slate-300 dark:border-slate-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 text-slate-800 dark:text-white"
+                                        placeholder="Enter position"
+                                    />
+                                ) : (
+                                    <dd className="text-lg font-medium text-slate-800 dark:text-white">{profile.position}</dd>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    ), [profile, user, editMode, formData, loading, handleEdit, handleSave, handleCancel, handleInputChange])
+
     return (
         <Layout>
             <div className="space-y-8">
@@ -574,7 +765,7 @@ const ProfilePage = () => {
                     </p>
                 </div>
 
-                {user.role === 'mentor' ? MentorProfile : user.role === 'guardian' ? <GuardianProfile /> : <MenteeProfile />}
+                {user.role === 'admin' ? AdminProfile : user.role === 'mentor' ? MentorProfile : user.role === 'guardian' ? <GuardianProfile /> : <MenteeProfile />}
             </div>
         </Layout>
     )

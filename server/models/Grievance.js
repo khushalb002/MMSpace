@@ -62,6 +62,30 @@ const grievanceSchema = new mongoose.Schema({
         type: String,
         default: ''
     },
+    comments: [{
+        author: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        },
+        authorRole: {
+            type: String,
+            enum: ['admin', 'mentor', 'mentee'],
+            required: true
+        },
+        authorName: {
+            type: String,
+            required: true
+        },
+        text: {
+            type: String,
+            required: true
+        },
+        createdAt: {
+            type: Date,
+            default: Date.now
+        }
+    }],
     resolution: {
         type: String,
         default: ''

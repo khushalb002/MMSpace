@@ -739,6 +739,40 @@ const GrievancePage = () => {
                                     </div>
                                 )}
 
+                                {/* Comments Section */}
+                                {selectedGrievance.comments && selectedGrievance.comments.length > 0 && (
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">
+                                            Comments ({selectedGrievance.comments.length})
+                                        </h4>
+                                        <div className="space-y-3 max-h-64 overflow-y-auto">
+                                            {selectedGrievance.comments.map((comment, index) => (
+                                                <div key={index} className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center space-x-2">
+                                                            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                                                                comment.authorRole === 'admin' ? 'bg-purple-500' :
+                                                                comment.authorRole === 'mentor' ? 'bg-blue-500' :
+                                                                'bg-green-500'
+                                                            }`}>
+                                                                {comment.authorName?.charAt(0) || 'U'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-slate-800 dark:text-white">{comment.authorName}</p>
+                                                                <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{comment.authorRole}</p>
+                                                            </div>
+                                                        </div>
+                                                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                            {new Date(comment.createdAt).toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                    <p className="text-sm text-slate-700 dark:text-slate-300">{comment.text}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {selectedGrievance.status === 'resolved' && user.role === 'mentee' && (
                                     <div>
                                         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-3">

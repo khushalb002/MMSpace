@@ -439,4 +439,75 @@ router.put('/:id/student-confirm', auth, roleCheck(['mentee']), async (req, res)
     }
 });
 
+// @route   POST /api/grievances/:id/comment
+// @desc    Add comment to grievance
+// @access  Private (Admin/Mentor/Mentee)
+router.post('/:id/comment', auth, roleCheck(['admin', 'mentor', 'mentee']), async (req, res) => {
+    try {
+        const { text } = req.body;
+
+        if (!text || text.trim() === '') {
+            return res.status(400).json({ message: 'Comment text is required' });
+        }
+
+        const grievance = await Grievance.findById(req.params.id);
+
+        if (!grievance) {
+            return res.status(404).json({ message: 'Grievance not found' });
+        }
+
+        // Get user profile to get the name
+        let authorName = req.user.email;
+        if (req.user.role === 'admin') {
+            const Admin = require('../models/Admin');
+            const admin = await safeFindOne(Admin, { userId: req.user._id });
+            if (admin) authorName = admin.fullName;
+        } else if (req.user.role === 'mentor') {
+            const mentor = await safeFindOne(Mentor, { userId: req.user._id });
+            if (mentor) authorName = mentor.fullName;
+        } else if (req.user.role === 'mentee') {
+            const mentee = await safeFindOne(Mentee, { userId: req.user._id });
+            if (mentee) authorName = mentee.fullName;
+        }
+
+        const comment = {
+            author: req.user._id,
+            authorRole: req.user.role,
+            authorName: authorName,
+            text: text.trim(),
+            createdAt: new Date()
+        };
+
+        grievance.comments.push(comment);
+        await grievance.save();
+
+        // Get populated version
+        const populatedGrievance = await executeWithRetry(async () => {
+            return Grievance.findById(grievance._id)
+                .populate('menteeId', 'fullName studentId')
+                .populate('mentorId', 'fullName')
+                .lean();
+        });
+
+        // Emit notification to relevant parties
+        if (grievance.menteeId) {
+            req.io.to(grievance.menteeId.toString()).emit('newGrievanceComment', {
+                grievanceId: grievance._id,
+                comment
+            });
+        }
+        if (grievance.mentorId) {
+            req.io.to(grievance.mentorId.toString()).emit('newGrievanceComment', {
+                grievanceId: grievance._id,
+                comment
+            });
+        }
+
+        res.json(populatedGrievance);
+    } catch (error) {
+        console.error('Error adding comment to grievance:', error);
+        res.status(500).json({ message: 'Failed to add comment' });
+    }
+});
+
 module.exports = router;

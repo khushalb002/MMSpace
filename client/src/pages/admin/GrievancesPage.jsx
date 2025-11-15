@@ -27,6 +27,11 @@ const AdminGrievancesPage = () => {
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
     const [categoryFilter, setCategoryFilter] = useState('all')
+    const [selectedGrievance, setSelectedGrievance] = useState(null)
+    const [showViewModal, setShowViewModal] = useState(false)
+    const [showCommentModal, setShowCommentModal] = useState(false)
+    const [commentText, setCommentText] = useState('')
+    const [submittingComment, setSubmittingComment] = useState(false)
 
     useEffect(() => {
         if (user && user.role !== 'admin') {
@@ -74,6 +79,37 @@ const AdminGrievancesPage = () => {
         } catch (error) {
             console.error('Error updating grievance status:', error)
             toast.error('Failed to update grievance status')
+        }
+    }
+
+    const handleViewGrievance = (grievance) => {
+        setSelectedGrievance(grievance)
+        setShowViewModal(true)
+    }
+
+    const handleOpenCommentModal = (grievance) => {
+        setSelectedGrievance(grievance)
+        setShowCommentModal(true)
+        setCommentText('')
+    }
+
+    const handleAddComment = async () => {
+        if (!commentText.trim() || !selectedGrievance) return
+
+        try {
+            setSubmittingComment(true)
+            await api.post(`/grievances/${selectedGrievance._id}/comment`, {
+                text: commentText.trim()
+            })
+            toast.success('Comment added successfully')
+            setShowCommentModal(false)
+            setCommentText('')
+            fetchGrievances()
+        } catch (error) {
+            console.error('Error adding comment:', error)
+            toast.error('Failed to add comment')
+        } finally {
+            setSubmittingComment(false)
         }
     }
 
@@ -243,11 +279,12 @@ const AdminGrievancesPage = () => {
                             className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-slate-800 dark:text-white"
                         >
                             <option value="all">All Categories</option>
-                            <option value="academic">Academic</option>
-                            <option value="administrative">Administrative</option>
-                            <option value="facilities">Facilities</option>
-                            <option value="harassment">Harassment</option>
-                            <option value="disciplinary">Disciplinary</option>
+                            <option value="misconduct-complaint">Misconduct / Complaint</option>
+                            <option value="user-experience">User Experience</option>
+                            <option value="billing-payment">Billing / Payment</option>
+                            <option value="communication-support">Communication & Support</option>
+                            <option value="administrative-issues">Administrative Issues</option>
+                            <option value="technical-issues">Technical Issues</option>
                             <option value="other">Other</option>
                         </select>
 
@@ -362,12 +399,14 @@ const AdminGrievancesPage = () => {
                                                     </button>
                                                 )}
                                                 <button
+                                                    onClick={() => handleViewGrievance(grievance)}
                                                     className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
                                                     title="View Details"
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </button>
                                                 <button
+                                                    onClick={() => handleOpenCommentModal(grievance)}
                                                     className="p-2 rounded-lg bg-gray-100 dark:bg-gray-900/30 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-900/50 transition-colors"
                                                     title="Add Comment"
                                                 >
@@ -393,6 +432,190 @@ const AdminGrievancesPage = () => {
                         </div>
                     )}
                 </div>
+
+                {/* View Grievance Modal */}
+                {showViewModal && selectedGrievance && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                            <div className="p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center">
+                                        <FileText className="h-6 w-6 mr-2 text-purple-600 dark:text-purple-400" />
+                                        Grievance Details
+                                    </h3>
+                                    <button
+                                        onClick={() => setShowViewModal(false)}
+                                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                    >
+                                        <XCircle className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-6">
+                                    {/* Student Info */}
+                                    <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-purple-200/50 dark:border-purple-800/50">
+                                        <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-3">Student Information</h4>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Name</p>
+                                                <p className="text-base font-medium text-slate-800 dark:text-white">{selectedGrievance.menteeId?.fullName || 'Unknown'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Roll No</p>
+                                                <p className="text-base font-medium text-slate-800 dark:text-white">{selectedGrievance.rollNo || selectedGrievance.menteeId?.studentId}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Email</p>
+                                                <p className="text-base font-medium text-slate-800 dark:text-white">{selectedGrievance.email}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Mentor</p>
+                                                <p className="text-base font-medium text-slate-800 dark:text-white">{selectedGrievance.mentorId?.fullName || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Grievance Details */}
+                                    <div>
+                                        <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-3">Grievance Information</h4>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Subject</p>
+                                                <p className="text-base font-medium text-slate-800 dark:text-white">{selectedGrievance.subject || selectedGrievance.title}</p>
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-4">
+                                                <div>
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400">Type</p>
+                                                    <span className="inline-block mt-1 px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 capitalize">
+                                                        {selectedGrievance.grievanceType || selectedGrievance.category}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400">Priority</p>
+                                                    <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-medium capitalize ${getPriorityColor(selectedGrievance.priority)}`}>
+                                                        {selectedGrievance.priority || 'Medium'}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-slate-600 dark:text-slate-400">Status</p>
+                                                    <span className={`inline-flex items-center mt-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedGrievance.status)}`}>
+                                                        {getStatusIcon(selectedGrievance.status)}
+                                                        <span className="ml-1 capitalize">{selectedGrievance.status?.replace('-', ' ')}</span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Description</p>
+                                                <p className="text-base text-slate-800 dark:text-white mt-1 bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg whitespace-pre-wrap">
+                                                    {selectedGrievance.description}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Date of Incident</p>
+                                                <p className="text-base font-medium text-slate-800 dark:text-white">{new Date(selectedGrievance.dateOfIncident).toLocaleDateString()}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Submitted On</p>
+                                                <p className="text-base font-medium text-slate-800 dark:text-white">{new Date(selectedGrievance.createdAt).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Resolution */}
+                                    {selectedGrievance.resolution && (
+                                        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 border border-green-200/50 dark:border-green-800/50">
+                                            <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-2">Resolution</h4>
+                                            <p className="text-base text-slate-800 dark:text-white whitespace-pre-wrap">{selectedGrievance.resolution}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Comments Section */}
+                                    {selectedGrievance.comments && selectedGrievance.comments.length > 0 && (
+                                        <div>
+                                            <h4 className="text-lg font-semibold text-slate-800 dark:text-white mb-3">Comments ({selectedGrievance.comments.length})</h4>
+                                            <div className="space-y-3 max-h-64 overflow-y-auto">
+                                                {selectedGrievance.comments.map((comment, index) => (
+                                                    <div key={index} className="bg-slate-50 dark:bg-slate-700/50 rounded-lg p-3">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="flex items-center space-x-2">
+                                                                <div className={`h-8 w-8 rounded-full flex items-center justify-center text-white font-bold text-xs ${
+                                                                    comment.authorRole === 'admin' ? 'bg-purple-500' :
+                                                                    comment.authorRole === 'mentor' ? 'bg-blue-500' :
+                                                                    'bg-green-500'
+                                                                }`}>
+                                                                    {comment.authorName?.charAt(0) || 'U'}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-semibold text-slate-800 dark:text-white">{comment.authorName}</p>
+                                                                    <p className="text-xs text-slate-500 dark:text-slate-400 capitalize">{comment.authorRole}</p>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                                                {new Date(comment.createdAt).toLocaleString()}
+                                                            </p>
+                                                        </div>
+                                                        <p className="text-sm text-slate-700 dark:text-slate-300">{comment.text}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Add Comment Modal */}
+                {showCommentModal && selectedGrievance && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 dark:border-slate-700/50 w-full max-w-lg">
+                            <div className="p-6">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
+                                        <MessageSquare className="h-5 w-5 mr-2 text-purple-600 dark:text-purple-400" />
+                                        Add Comment
+                                    </h3>
+                                    <button
+                                        onClick={() => setShowCommentModal(false)}
+                                        className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                    >
+                                        <XCircle className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                                    </button>
+                                </div>
+
+                                <div className="mb-4">
+                                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+                                        Adding comment to: <span className="font-semibold text-slate-800 dark:text-white">{selectedGrievance.subject || selectedGrievance.title}</span>
+                                    </p>
+                                    <textarea
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                        placeholder="Enter your comment here..."
+                                        className="w-full px-4 py-3 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50 text-slate-800 dark:text-white resize-none"
+                                        rows="5"
+                                    />
+                                </div>
+
+                                <div className="flex justify-end space-x-3">
+                                    <button
+                                        onClick={() => setShowCommentModal(false)}
+                                        className="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleAddComment}
+                                        disabled={submittingComment || !commentText.trim()}
+                                        className="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {submittingComment ? 'Submitting...' : 'Submit Comment'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </Layout>
     )
