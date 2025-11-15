@@ -77,11 +77,31 @@ router.get('/:id/details', auth, roleCheck(['mentor']), async (req, res) => {
     try {
         const mentee = await Mentee.findById(req.params.id)
             .populate('userId', 'email lastLogin')
-            .populate('mentorId', 'fullName department');
+            .populate('mentorId', 'fullName department')
+            .populate({
+                path: 'guardianIds',
+                select: 'fullName relationship phone address profilePhoto',
+                populate: {
+                    path: 'userId',
+                    select: 'email lastLogin'
+                }
+            });
 
         if (!mentee) {
             return res.status(404).json({ message: 'Mentee not found' });
         }
+
+        // Format guardian data
+        const guardians = mentee.guardianIds.map(guardian => ({
+            _id: guardian._id,
+            fullName: guardian.fullName,
+            relationship: guardian.relationship,
+            phone: guardian.phone,
+            address: guardian.address,
+            profilePhoto: guardian.profilePhoto,
+            email: guardian.userId?.email,
+            lastLogin: guardian.userId?.lastLogin
+        }));
 
         // Generate sample attendance history for the last 12 months
         const months = [
@@ -96,6 +116,7 @@ router.get('/:id/details', auth, roleCheck(['mentor']), async (req, res) => {
 
         const menteeDetails = {
             ...mentee.toObject(),
+            guardians,
             attendanceHistory
         };
 
