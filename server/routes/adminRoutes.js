@@ -5,6 +5,7 @@ const Mentor = require('../models/Mentor');
 const Mentee = require('../models/Mentee');
 const Group = require('../models/Group');
 const LeaveRequest = require('../models/LeaveRequest');
+const Attendance = require('../models/Attendance');
 const { auth } = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
 
@@ -413,29 +414,47 @@ router.get('/attendance', auth, roleCheck(['admin']), async (req, res) => {
     try {
         const { date, month, year } = req.query;
 
-        // For now, return sample data - in production, this would query an Attendance model
         const mentees = await Mentee.find().select('_id fullName studentId class section');
-
-        // Generate sample attendance data
         const attendanceData = {};
-        mentees.forEach(mentee => {
-            attendanceData[mentee._id] = {};
 
-            if (date) {
-                // Single date - random attendance
-                attendanceData[mentee._id][date] = Math.random() > 0.2 ? 'present' : 'absent';
-            } else if (month && year) {
-                // Monthly data - generate for each day
-                const daysInMonth = new Date(year, month, 0).getDate();
+        if (date) {
+            // Get attendance for a specific date
+            const attendanceRecords = await Attendance.find({
+                date: new Date(date)
+            });
+
+            mentees.forEach(mentee => {
+                attendanceData[mentee._id] = {};
+                const record = attendanceRecords.find(r => r.menteeId.toString() === mentee._id.toString());
+                attendanceData[mentee._id][date] = record ? record.status : null;
+            });
+        } else if (month && year) {
+            // Get attendance for entire month
+            const startDate = new Date(year, month - 1, 1);
+            const endDate = new Date(year, month, 0);
+
+            const attendanceRecords = await Attendance.find({
+                date: { $gte: startDate, $lte: endDate }
+            });
+
+            mentees.forEach(mentee => {
+                attendanceData[mentee._id] = {};
+                const daysInMonth = endDate.getDate();
+
                 for (let day = 1; day <= daysInMonth; day++) {
                     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                    attendanceData[mentee._id][dateStr] = Math.random() > 0.2 ? 'present' : 'absent';
+                    const record = attendanceRecords.find(r =>
+                        r.menteeId.toString() === mentee._id.toString() &&
+                        r.date.toISOString().split('T')[0] === dateStr
+                    );
+                    attendanceData[mentee._id][dateStr] = record ? record.status : null;
                 }
-            }
-        });
+            });
+        }
 
         res.json(attendanceData);
     } catch (error) {
+        console.error('Error fetching attendance:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -446,32 +465,81 @@ router.get('/attendance', auth, roleCheck(['admin']), async (req, res) => {
 router.post('/attendance', auth, roleCheck(['admin']), async (req, res) => {
     try {
         const { date, attendanceData } = req.body;
-
-        // In production, this would save to an Attendance model
-        // For now, we'll update the mentee attendance statistics
+        const attendanceDate = new Date(date);
 
         for (const [menteeId, attendance] of Object.entries(attendanceData)) {
             if (attendance[date]) {
-                const mentee = await Mentee.findById(menteeId);
-                if (mentee) {
-                    // Update attendance statistics
-                    const isPresent = attendance[date] === 'present';
+                const status = attendance[date];
 
-                    if (isPresent) {
-                        mentee.attendance.presentDays = (mentee.attendance.presentDays || 0) + 1;
-                    }
-                    mentee.attendance.totalDays = (mentee.attendance.totalDays || 0) + 1;
-                    mentee.attendance.percentage = Math.round(
-                        (mentee.attendance.presentDays / mentee.attendance.totalDays) * 100
-                    );
+                // Upsert attendance record
+                await Attendance.findOneAndUpdate(
+                    { menteeId, date: attendanceDate },
+                    {
+                        menteeId,
+                        date: attendanceDate,
+                        status,
+                        markedBy: req.user.id
+                    },
+                    { upsert: true, new: true }
+                );
 
-                    await mentee.save();
-                }
+                // Update mentee attendance statistics
+                const totalRecords = await Attendance.countDocuments({ menteeId });
+                const presentRecords = await Attendance.countDocuments({
+                    menteeId,
+                    status: 'present'
+                });
+
+                const percentage = totalRecords > 0
+                    ? Math.round((presentRecords / totalRecords) * 100)
+                    : 0;
+
+                await Mentee.findByIdAndUpdate(menteeId, {
+                    'attendance.totalDays': totalRecords,
+                    'attendance.presentDays': presentRecords,
+                    'attendance.percentage': percentage
+                });
             }
         }
 
         res.json({ message: 'Attendance saved successfully' });
     } catch (error) {
+        console.error('Error saving attendance:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// @route   GET /api/admin/attendance/stats/:menteeId
+// @desc    Get attendance statistics for a specific mentee
+// @access  Private (Admin only)
+router.get('/attendance/stats/:menteeId', auth, roleCheck(['admin']), async (req, res) => {
+    try {
+        const { menteeId } = req.params;
+        const { startDate, endDate } = req.query;
+
+        const query = { menteeId };
+        if (startDate && endDate) {
+            query.date = {
+                $gte: new Date(startDate),
+                $lte: new Date(endDate)
+            };
+        }
+
+        const records = await Attendance.find(query).sort({ date: 1 });
+        const totalDays = records.length;
+        const presentDays = records.filter(r => r.status === 'present').length;
+        const absentDays = records.filter(r => r.status === 'absent').length;
+        const percentage = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+
+        res.json({
+            totalDays,
+            presentDays,
+            absentDays,
+            percentage,
+            records
+        });
+    } catch (error) {
+        console.error('Error fetching attendance stats:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });

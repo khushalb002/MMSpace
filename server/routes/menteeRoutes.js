@@ -2,6 +2,7 @@ const express = require('express');
 const Mentee = require('../models/Mentee');
 const LeaveRequest = require('../models/LeaveRequest');
 const Grievance = require('../models/Grievance');
+const Attendance = require('../models/Attendance');
 const { auth } = require('../middleware/auth');
 const roleCheck = require('../middleware/roleCheck');
 
@@ -103,15 +104,27 @@ router.get('/:id/details', auth, roleCheck(['mentor']), async (req, res) => {
             lastLogin: guardian.userId?.lastLogin
         }));
 
-        // Generate sample attendance history for the last 12 months
+        // Get actual attendance history for the last 12 months
         const months = [
             'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
         ];
 
-        const attendanceHistory = months.map((month, index) => ({
-            month,
-            percentage: Math.floor(Math.random() * 30) + 70 // Random between 70-100%
+        const currentYear = new Date().getFullYear();
+        const attendanceHistory = await Promise.all(months.map(async (month, index) => {
+            const monthStart = new Date(currentYear, index, 1);
+            const monthEnd = new Date(currentYear, index + 1, 0);
+
+            const records = await Attendance.find({
+                menteeId: mentee._id,
+                date: { $gte: monthStart, $lte: monthEnd }
+            });
+
+            const totalDays = records.length;
+            const presentDays = records.filter(r => r.status === 'present').length;
+            const percentage = totalDays > 0 ? Math.round((presentDays / totalDays) * 100) : 0;
+
+            return { month, percentage };
         }));
 
         const menteeDetails = {
