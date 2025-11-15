@@ -168,23 +168,24 @@ const MentorMenteeManagement = () => {
             {filteredMentors.map((mentor, index) => (
                     <div
                         key={mentor._id}
-                        className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border border-white/20 dark:border-slate-700/50 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
-                        style={{ animationDelay: `${index * 0.1}s` }}
+                        className="group bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/50 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                        style={{ animationDelay: `${index * 0.05}s` }}
                     >
                         {/* Mentor Header */}
-                        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4">
-                            <div className="flex items-center space-x-3">
-                                <div className="h-16 w-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
-                                    <Shield className="h-8 w-8" />
+                        <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 p-5">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                            <div className="relative flex items-center space-x-3">
+                                <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                                    <Shield className="h-7 w-7" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg font-bold text-white truncate">
+                                    <h3 className="text-base font-bold text-white truncate">
                                         {mentor.fullName}
                                     </h3>
-                                    <p className="text-white/80 text-sm">
+                                    <p className="text-white/90 text-xs">
                                         {mentor.employeeId}
                                     </p>
-                                    <p className="text-white/70 text-xs">
+                                    <p className="text-white/80 text-xs">
                                         {mentor.department}
                                     </p>
                                 </div>
@@ -283,23 +284,24 @@ const MentorMenteeManagement = () => {
             {filteredMentees.map((mentee, index) => (
                     <div
                         key={mentee._id}
-                        className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border border-white/20 dark:border-slate-700/50 hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden"
-                        style={{ animationDelay: `${index * 0.1}s` }}
+                        className="group bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/50 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden"
+                        style={{ animationDelay: `${index * 0.05}s` }}
                     >
                         {/* Mentee Header */}
-                        <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-4">
-                            <div className="flex items-center space-x-3">
-                                <div className="h-16 w-16 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
-                                    <GraduationCap className="h-8 w-8" />
+                        <div className="relative bg-gradient-to-r from-emerald-600 to-emerald-600 p-5">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                            <div className="relative flex items-center space-x-3">
+                                <div className="h-14 w-14 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
+                                    <GraduationCap className="h-7 w-7" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg font-bold text-white truncate">
+                                    <h3 className="text-base font-bold text-white truncate">
                                         {mentee.fullName}
                                     </h3>
-                                    <p className="text-white/80 text-sm">
+                                    <p className="text-white/90 text-xs">
                                         {mentee.studentId}
                                     </p>
-                                    <p className="text-white/70 text-xs">
+                                    <p className="text-white/80 text-xs">
                                         Class {mentee.class}-{mentee.section}
                                     </p>
                                 </div>
@@ -398,9 +400,10 @@ const MentorMenteeManagement = () => {
     )
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-6">
+        <>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-6">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center">
@@ -509,6 +512,7 @@ const MentorMenteeManagement = () => {
                     <MenteesTab />
                 </div>
             )}
+            </div>
 
             {/* Assign Mentor Modal */}
             {showAssignModal && selectedMentee && (
@@ -815,7 +819,7 @@ const MentorMenteeManagement = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </>
     )
 }
 

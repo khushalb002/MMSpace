@@ -358,9 +358,10 @@ const AttendanceManagement = () => {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+        <>
+            <div className="space-y-6">
+                {/* Header */}
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
                     <div className="flex-1">
                         <h2 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
@@ -878,6 +879,7 @@ const AttendanceManagement = () => {
                     )}
                 </div>
             </div>
+            </div>
 
             {/* Attendance Insights Modal */}
             {
@@ -982,7 +984,7 @@ const AttendanceManagement = () => {
                     </div>
                 )
             }
-        </div >
+        </>
     )
 }
 

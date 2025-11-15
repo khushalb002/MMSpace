@@ -225,9 +225,10 @@ const AdminGrievancesPage = () => {
 
     return (
         <Layout>
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-6">
+            <>
+                <div className="space-y-6">
+                    {/* Header */}
+                    <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div>
                             <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center">
@@ -432,6 +433,7 @@ const AdminGrievancesPage = () => {
                         </div>
                     )}
                 </div>
+                </div>
 
                 {/* View Grievance Modal */}
                 {showViewModal && selectedGrievance && (
@@ -616,7 +618,7 @@ const AdminGrievancesPage = () => {
                         </div>
                     </div>
                 )}
-            </div>
+            </>
         </Layout>
     )
 }

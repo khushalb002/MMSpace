@@ -467,30 +467,31 @@ const UserManagement = () => {
                 {paginatedUsers.map((user, index) => (
                     <div
                         key={user._id}
-                        className={`bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-lg rounded-2xl border ${selectedUsers.includes(user._id)
+                        className={`group bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl shadow-xl rounded-2xl border ${selectedUsers.includes(user._id)
                             ? 'border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/50'
-                            : 'border-white/20 dark:border-slate-700/50'
-                            } hover:shadow-xl transition-all duration-300 hover:scale-[1.02] overflow-hidden`}
-                        style={{ animationDelay: `${index * 0.1}s` }}
+                            : 'border-slate-200/50 dark:border-slate-700/50'
+                            } hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden`}
+                        style={{ animationDelay: `${index * 0.05}s` }}
                     >
                         {/* User Header */}
-                        <div className={`bg-gradient-to-r ${getRoleColor(user.role)} p-4`}>
-                            <div className="flex items-center space-x-3">
+                        <div className={`relative bg-gradient-to-r ${getRoleColor(user.role)} p-5`}>
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                            <div className="relative flex items-center space-x-3">
                                 <input
                                     type="checkbox"
                                     checked={selectedUsers.includes(user._id)}
                                     onChange={() => handleSelectUser(user._id)}
                                     onClick={(e) => e.stopPropagation()}
-                                    className="h-5 w-5 rounded border-white/50 text-white bg-white/20 focus:ring-white/50 cursor-pointer"
+                                    className="h-4 w-4 rounded border-white/50 text-white bg-white/20 focus:ring-white/50 cursor-pointer"
                                 />
-                                <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+                                <div className="h-12 w-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform">
                                     {getRoleIcon(user.role)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h3 className="text-lg font-bold text-white truncate">
+                                    <h3 className="text-base font-bold text-white truncate">
                                         {user.profile?.fullName || 'No Name'}
                                     </h3>
-                                    <p className="text-white/80 text-sm truncate">
+                                    <p className="text-white/90 text-xs truncate">
                                         {user.email}
                                     </p>
                                 </div>
@@ -498,55 +499,64 @@ const UserManagement = () => {
                         </div>
 
                         {/* User Details */}
-                        <div className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${user.role === 'admin' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                                    user.role === 'mentor' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                                        'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                        <div className="p-5">
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold capitalize ${user.role === 'admin' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' :
+                                    user.role === 'mentor' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
+                                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
                                     }`}>
                                     {user.role}
                                 </span>
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.isActive
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${user.isActive
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                    : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
                                     }`}>
                                     {user.isActive ? 'Active' : 'Inactive'}
                                 </span>
                             </div>
 
-                            <div className="bg-slate-50/50 dark:bg-slate-700/50 rounded-xl p-3 mb-4 space-y-1">
-                                <div className="text-xs text-slate-600 dark:text-slate-400">
-                                    <p><strong>ID:</strong> {user.profile?.employeeId || user.profile?.studentId || 'N/A'}</p>
-                                    <p><strong>Department:</strong> {user.profile?.department || user.profile?.class || 'N/A'}</p>
-                                    <p><strong>Last Login:</strong> {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}</p>
+                            <div className="bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/30 dark:to-slate-700/20 rounded-xl p-3 mb-4 border border-slate-200/50 dark:border-slate-600/30">
+                                <div className="text-xs text-slate-600 dark:text-slate-400 space-y-1.5">
+                                    <p className="flex items-center justify-between">
+                                        <span className="font-medium">ID:</span>
+                                        <span className="text-slate-800 dark:text-slate-300">{user.profile?.employeeId || user.profile?.studentId || 'N/A'}</span>
+                                    </p>
+                                    <p className="flex items-center justify-between">
+                                        <span className="font-medium">Department:</span>
+                                        <span className="text-slate-800 dark:text-slate-300">{user.profile?.department || user.profile?.class || 'N/A'}</span>
+                                    </p>
+                                    <p className="flex items-center justify-between">
+                                        <span className="font-medium">Last Login:</span>
+                                        <span className="text-slate-800 dark:text-slate-300">{user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Never'}</span>
+                                    </p>
                                 </div>
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex space-x-2">
+                            <div className="flex gap-2">
                                 <button
                                     onClick={() => handleEditUser(user)}
-                                    className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2 px-3 rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
+                                    className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white py-2.5 px-3 rounded-xl font-semibold text-xs shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
                                 >
-                                    <Edit className="h-4 w-4 mr-1" />
+                                    <Edit className="h-3.5 w-3.5 mr-1.5" />
                                     Edit
                                 </button>
                                 <button
                                     onClick={() => handleToggleUserStatus(user._id)}
-                                    className={`flex-1 py-2 px-3 rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center ${user.isActive
-                                        ? 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
-                                        : 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                                    className={`flex-1 py-2.5 px-3 rounded-xl font-semibold text-xs shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center ${user.isActive
+                                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                                        : 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white'
                                         }`}
                                 >
-                                    {user.isActive ? <ToggleRight className="h-4 w-4 mr-1" /> : <ToggleLeft className="h-4 w-4 mr-1" />}
+                                    {user.isActive ? <ToggleRight className="h-3.5 w-3.5 mr-1.5" /> : <ToggleLeft className="h-3.5 w-3.5 mr-1.5" />}
                                     {user.isActive ? 'Disable' : 'Enable'}
                                 </button>
                                 <button
                                     onClick={() => handleDeleteUser(user._id)}
-                                    className="p-2 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-300 hover:scale-110"
+                                    className="p-2.5 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-300 hover:scale-110 shadow-md"
                                     title="Delete User"
                                 >
-                                    <Trash2 className="h-4 w-4" />
+                                    <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                             </div>
                         </div>
@@ -636,6 +646,7 @@ const UserManagement = () => {
                     </div>
                 </div>
             )}
+            </div>
 
             {/* Edit User Modal */}
             {showEditModal && selectedUser && (
@@ -816,7 +827,6 @@ const UserManagement = () => {
                     </div>
                 </div>
             )}
-            </div>
 
             {/* Add User Modal */}
             {showAddUserModal && (
