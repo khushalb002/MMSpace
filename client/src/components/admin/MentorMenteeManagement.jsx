@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
     Users,
@@ -30,11 +30,12 @@ const MentorMenteeManagement = () => {
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'mentors')
     const [searchTerm, setSearchTerm] = useState('')
+    const [mentorFilter, setMentorFilter] = useState('all')
     const [showAssignModal, setShowAssignModal] = useState(false)
     const [selectedMentee, setSelectedMentee] = useState(null)
     const [showEditModal, setShowEditModal] = useState(false)
     const [selectedPerson, setSelectedPerson] = useState(null)
-    const [editType, setEditType] = useState('') // 'mentor' or 'mentee'
+    const [editType, setEditType] = useState('')
     const [editFormData, setEditFormData] = useState({})
 
     useEffect(() => {
@@ -131,17 +132,28 @@ const MentorMenteeManagement = () => {
         }
     }
 
-    const filteredMentors = mentors.filter(mentor =>
-        mentor.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mentor.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mentor.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredMentors = useMemo(() => {
+        return mentors.filter(mentor => {
+            const matchesSearch = mentor.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                mentor.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                mentor.employeeId.toLowerCase().includes(searchTerm.toLowerCase())
+            return matchesSearch
+        })
+    }, [mentors, searchTerm])
 
-    const filteredMentees = mentees.filter(mentee =>
-        mentee.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mentee.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mentee.class.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredMentees = useMemo(() => {
+        return mentees.filter(mentee => {
+            const matchesSearch = mentee.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                mentee.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                mentee.class.toLowerCase().includes(searchTerm.toLowerCase())
+
+            const matchesMentor = mentorFilter === 'all' ||
+                (mentorFilter === 'unassigned' && !mentee.mentorId) ||
+                mentee.mentorId?._id === mentorFilter
+
+            return matchesSearch && matchesMentor
+        })
+    }, [mentees, searchTerm, mentorFilter])
 
     if (loading) {
         return (
@@ -167,6 +179,7 @@ const MentorMenteeManagement = () => {
                 <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input
+                        key="mentor-search"
                         type="text"
                         placeholder="Search mentors..."
                         value={searchTerm}
@@ -305,15 +318,31 @@ const MentorMenteeManagement = () => {
                         Manage mentee profiles and mentor assignments
                     </p>
                 </div>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Search mentees..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
-                    />
+                <div className="flex gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <input
+                            key="mentee-search"
+                            type="text"
+                            placeholder="Search mentees..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                        />
+                    </div>
+                    <select
+                        value={mentorFilter}
+                        onChange={(e) => setMentorFilter(e.target.value)}
+                        className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-slate-800 dark:text-white"
+                    >
+                        <option value="all">All Mentors</option>
+                        <option value="unassigned">Unassigned</option>
+                        {mentors.map(mentor => (
+                            <option key={mentor._id} value={mentor._id}>
+                                {mentor.fullName}
+                            </option>
+                        ))}
+                    </select>
                 </div>
             </div>
 
@@ -423,25 +452,13 @@ const MentorMenteeManagement = () => {
                                 )}
                             </div>
 
-                            <div className="flex space-x-2">
-                                <button
-                                    onClick={() => handleEditMentee(mentee)}
-                                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-3 rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
-                                >
-                                    <Edit className="h-4 w-4 mr-1" />
-                                    Edit
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setSelectedMentee(mentee)
-                                        setShowAssignModal(true)
-                                    }}
-                                    className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white py-2 px-3 rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
-                                >
-                                    <LinkIcon className="h-4 w-4 mr-1" />
-                                    Assign
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => handleEditMentee(mentee)}
+                                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2 px-3 rounded-xl font-medium text-sm shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center justify-center"
+                            >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit Profile
+                            </button>
                         </div>
                     </div>
                 ))}

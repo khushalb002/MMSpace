@@ -13,7 +13,14 @@ import {
     ChevronRight,
     UserCheck,
     UserX,
-    BarChart3
+    BarChart3,
+    Minus,
+    AlertTriangle,
+    TrendingUp,
+    Award,
+    Bell,
+    Activity,
+    Clock
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import api from '../../services/api'
@@ -29,8 +36,10 @@ const AttendanceManagement = () => {
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
     const [viewMode, setViewMode] = useState('daily') // 'daily' or 'monthly'
     const [searchTerm, setSearchTerm] = useState('')
-    const [classFilter, setClassFilter] = useState('all')
+    const [sectionFilter, setSectionFilter] = useState('all')
     const [saving, setSaving] = useState(false)
+    const [showAttendanceModal, setShowAttendanceModal] = useState(false)
+    const [modalType, setModalType] = useState('') // 'low', 'good', 'high'
 
     useEffect(() => {
         fetchMentees()
@@ -155,14 +164,116 @@ const AttendanceManagement = () => {
         return { present, absent, total: daysInMonth, percentage: present > 0 ? ((present / (present + absent)) * 100).toFixed(1) : 0 }
     }
 
+    const getAttendanceInsights = () => {
+        const lowAttendance = []
+        const goodAttendance = []
+        const highAttendance = []
+
+        mentees.forEach(mentee => {
+            const stats = getMonthlyStats(mentee._id)
+            const percentage = parseFloat(stats.percentage)
+
+            if (percentage > 0) {
+                if (percentage < 50) {
+                    lowAttendance.push({ ...mentee, percentage })
+                } else if (percentage >= 70 && percentage <= 90) {
+                    goodAttendance.push({ ...mentee, percentage })
+                } else if (percentage > 90) {
+                    highAttendance.push({ ...mentee, percentage })
+                }
+            }
+        })
+
+        return { lowAttendance, goodAttendance, highAttendance }
+    }
+
+    const openAttendanceModal = (type) => {
+        setModalType(type)
+        setShowAttendanceModal(true)
+    }
+
+    const getAttendanceTrends = () => {
+        const trends = []
+        const today = new Date()
+
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today)
+            date.setDate(date.getDate() - i)
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+            let present = 0
+            let absent = 0
+
+            mentees.forEach(mentee => {
+                const status = attendance[mentee._id]?.[dateStr]
+                if (status === 'present') present++
+                else if (status === 'absent') absent++
+            })
+
+            trends.push({
+                date: dateStr,
+                day: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                present,
+                absent,
+                total: present + absent
+            })
+        }
+
+        return trends
+    }
+
+    const getAlerts = () => {
+        const alerts = []
+        const today = new Date()
+
+        // Check for consecutive absences
+        mentees.forEach(mentee => {
+            let consecutiveAbsences = 0
+
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(today)
+                date.setDate(date.getDate() - i)
+                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+                if (attendance[mentee._id]?.[dateStr] === 'absent') {
+                    consecutiveAbsences++
+                } else if (attendance[mentee._id]?.[dateStr] === 'present') {
+                    break
+                }
+            }
+
+            if (consecutiveAbsences >= 3) {
+                alerts.push({
+                    type: 'consecutive',
+                    student: mentee,
+                    days: consecutiveAbsences,
+                    message: `${mentee.fullName} has been absent for ${consecutiveAbsences} consecutive days`
+                })
+            }
+        })
+
+        // Check for low monthly attendance
+        const insights = getAttendanceInsights()
+        insights.lowAttendance.forEach(student => {
+            alerts.push({
+                type: 'low',
+                student,
+                percentage: student.percentage,
+                message: `${student.fullName} has low attendance (${student.percentage}%)`
+            })
+        })
+
+        return alerts.slice(0, 5) // Return top 5 alerts
+    }
+
     const filteredMentees = mentees.filter(mentee => {
         const matchesSearch = mentee.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             mentee.studentId.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesClass = classFilter === 'all' || mentee.class === classFilter
-        return matchesSearch && matchesClass
+        const matchesSection = sectionFilter === 'all' || mentee.section === sectionFilter
+        return matchesSearch && matchesSection
     })
 
-    const uniqueClasses = [...new Set(mentees.map(mentee => mentee.class))].sort()
+    const uniqueSections = [...new Set(mentees.map(mentee => mentee.section))].sort()
     const stats = getAttendanceStats()
 
     if (loading) {
@@ -176,38 +287,76 @@ const AttendanceManagement = () => {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-6">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div>
-                        <h2 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center">
-                            <Calendar className="h-6 w-6 mr-3 text-green-600 dark:text-green-400" />
+            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                    <div className="flex-1">
+                        <h2 className="text-3xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
+                            <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl shadow-lg">
+                                <Calendar className="h-6 w-6 text-white" />
+                            </div>
                             Attendance Management
                         </h2>
-                        <p className="text-slate-600 dark:text-slate-400 mt-1">
-                            Track and manage student attendance records
+                        <p className="text-slate-600 dark:text-slate-400 mt-3">
+                            {viewMode === 'daily'
+                                ? 'Mark daily attendance for all students. Select a date and mark students as present or absent.'
+                                : 'View monthly attendance patterns and statistics across all students.'}
                         </p>
+
+                        {/* Quick Summary Stats */}
+                        {viewMode === 'daily' && (
+                            <div className="mt-6 grid grid-cols-4 gap-4">
+                                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200/50 dark:border-blue-800/50">
+                                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+                                        <Users className="h-4 w-4" />
+                                        <span className="text-xs font-semibold uppercase tracking-wide">Total</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.total}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200/50 dark:border-green-800/50">
+                                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
+                                        <UserCheck className="h-4 w-4" />
+                                        <span className="text-xs font-semibold uppercase tracking-wide">Present</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-green-700 dark:text-green-300">{stats.present}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-4 border border-red-200/50 dark:border-red-800/50">
+                                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-1">
+                                        <UserX className="h-4 w-4" />
+                                        <span className="text-xs font-semibold uppercase tracking-wide">Absent</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-red-700 dark:text-red-300">{stats.absent}</p>
+                                </div>
+                                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 border border-amber-200/50 dark:border-amber-800/50">
+                                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
+                                        <Calendar className="h-4 w-4" />
+                                        <span className="text-xs font-semibold uppercase tracking-wide">Unmarked</span>
+                                    </div>
+                                    <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">{stats.unmarked}</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* View Mode Toggle */}
-                    <div className="flex bg-slate-100/50 dark:bg-slate-700/50 rounded-2xl p-1">
+                    <div className="flex bg-slate-100/50 dark:bg-slate-700/50 rounded-2xl p-1 shadow-inner">
                         <button
                             onClick={() => setViewMode('daily')}
-                            className={`flex items-center px-4 py-2 rounded-xl font-medium transition-all duration-300 ${viewMode === 'daily'
-                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg'
+                            className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all duration-300 ${viewMode === 'daily'
+                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg scale-105'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                                 }`}
                         >
-                            <Calendar className="h-4 w-4 mr-2" />
+                            <Calendar className="h-5 w-5 mr-2" />
                             Daily View
                         </button>
                         <button
                             onClick={() => setViewMode('monthly')}
-                            className={`flex items-center px-4 py-2 rounded-xl font-medium transition-all duration-300 ${viewMode === 'monthly'
-                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg'
+                            className={`flex items-center px-6 py-3 rounded-xl font-medium transition-all duration-300 ${viewMode === 'monthly'
+                                ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-white shadow-lg scale-105'
                                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white'
                                 }`}
                         >
-                            <BarChart3 className="h-4 w-4 mr-2" />
+                            <BarChart3 className="h-5 w-5 mr-2" />
                             Monthly View
                         </button>
                     </div>
@@ -216,16 +365,79 @@ const AttendanceManagement = () => {
                 {/* Controls */}
                 {viewMode === 'daily' ? (
                     <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Calendar */}
-                        <div className="lg:col-span-1">
+                        {/* Calendar and Attendance Insights */}
+                        <div className="lg:col-span-1 space-y-4">
                             <CustomCalendar
                                 selectedDate={selectedDate}
                                 onDateSelect={setSelectedDate}
                                 className="w-full"
                             />
+
+                            {/* Attendance Insights Cards */}
+                            <div className="space-y-2">
+                                <button
+                                    onClick={() => openAttendanceModal('low')}
+                                    className="w-full bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-3 border border-red-200/50 dark:border-red-800/50 hover:shadow-lg transition-all duration-300 hover:scale-105 text-left"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                                                <AlertTriangle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wide">Low Attendance</p>
+                                                <p className="text-[10px] text-red-600/70 dark:text-red-400/70">Below 50%</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+                                            {getAttendanceInsights().lowAttendance.length}
+                                        </p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => openAttendanceModal('good')}
+                                    className="w-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-3 border border-blue-200/50 dark:border-blue-800/50 hover:shadow-lg transition-all duration-300 hover:scale-105 text-left"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                                                <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">Good Attendance</p>
+                                                <p className="text-[10px] text-blue-600/70 dark:text-blue-400/70">70% - 90%</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                                            {getAttendanceInsights().goodAttendance.length}
+                                        </p>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => openAttendanceModal('high')}
+                                    className="w-full bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-3 border border-green-200/50 dark:border-green-800/50 hover:shadow-lg transition-all duration-300 hover:scale-105 text-left"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                                                <Award className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-semibold text-green-600 dark:text-green-400 uppercase tracking-wide">High Attendance</p>
+                                                <p className="text-[10px] text-green-600/70 dark:text-green-400/70">Above 90%</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+                                            {getAttendanceInsights().highAttendance.length}
+                                        </p>
+                                    </div>
+                                </button>
+                            </div>
                         </div>
 
-                        {/* Controls */}
+                        {/* Controls and Analytics */}
                         <div className="lg:col-span-2 space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="relative">
@@ -240,13 +452,13 @@ const AttendanceManagement = () => {
                                 </div>
 
                                 <select
-                                    value={classFilter}
-                                    onChange={(e) => setClassFilter(e.target.value)}
+                                    value={sectionFilter}
+                                    onChange={(e) => setSectionFilter(e.target.value)}
                                     className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
                                 >
-                                    <option value="all">All Classes</option>
-                                    {uniqueClasses.map(cls => (
-                                        <option key={cls} value={cls}>Class {cls}</option>
+                                    <option value="all">All Sections</option>
+                                    {uniqueSections.map(section => (
+                                        <option key={section} value={section}>Section {section}</option>
                                     ))}
                                 </select>
                             </div>
@@ -266,6 +478,103 @@ const AttendanceManagement = () => {
                                     <UserX className="h-5 w-5 mr-2" />
                                     Mark All Absent
                                 </button>
+                            </div>
+
+                            {/* Attendance Trends Chart */}
+                            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-3 border border-purple-200/50 dark:border-purple-800/50">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Activity className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                    <h4 className="text-sm font-semibold text-slate-800 dark:text-white">7-Day Trend</h4>
+                                </div>
+                                <div className="flex items-end justify-between gap-1.5 h-16">
+                                    {getAttendanceTrends().map((trend, index) => {
+                                        const maxHeight = Math.max(...getAttendanceTrends().map(t => t.total))
+                                        const presentHeight = maxHeight > 0 ? (trend.present / maxHeight) * 100 : 0
+                                        const absentHeight = maxHeight > 0 ? (trend.absent / maxHeight) * 100 : 0
+
+                                        return (
+                                            <div key={index} className="flex-1 flex flex-col items-center gap-1">
+                                                <div className="w-full flex flex-col items-center gap-0.5 relative" style={{ height: '48px' }}>
+                                                    <div className="w-full absolute bottom-0 flex flex-col gap-0.5">
+                                                        {trend.present > 0 && (
+                                                            <div
+                                                                className="w-full bg-gradient-to-t from-green-500 to-emerald-400 rounded-t transition-all duration-300 hover:opacity-80"
+                                                                style={{ height: `${presentHeight * 0.48}px` }}
+                                                                title={`Present: ${trend.present}`}
+                                                            />
+                                                        )}
+                                                        {trend.absent > 0 && (
+                                                            <div
+                                                                className="w-full bg-gradient-to-t from-red-500 to-rose-400 rounded-t transition-all duration-300 hover:opacity-80"
+                                                                style={{ height: `${absentHeight * 0.48}px` }}
+                                                                title={`Absent: ${trend.absent}`}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">{trend.day}</span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-purple-200/50 dark:border-purple-800/50">
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 bg-gradient-to-br from-green-500 to-emerald-400 rounded"></div>
+                                        <span className="text-[10px] text-slate-600 dark:text-slate-400">Present</span>
+                                    </div>
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-2 h-2 bg-gradient-to-br from-red-500 to-rose-400 rounded"></div>
+                                        <span className="text-[10px] text-slate-600 dark:text-slate-400">Absent</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Alerts Panel */}
+                            <div className="mt-3 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-3 border border-amber-200/50 dark:border-amber-800/50">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Bell className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                    <h4 className="text-sm font-semibold text-slate-800 dark:text-white">Alerts</h4>
+                                </div>
+                                <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                                    {getAlerts().length > 0 ? (
+                                        getAlerts().slice(0, 3).map((alert, index) => (
+                                            <div
+                                                key={index}
+                                                className="flex items-center gap-2 p-2 bg-white/50 dark:bg-slate-800/50 rounded-lg hover:shadow-md transition-all"
+                                            >
+                                                <div className={`p-1 rounded ${alert.type === 'consecutive'
+                                                    ? 'bg-red-100 dark:bg-red-900/30'
+                                                    : 'bg-amber-100 dark:bg-amber-900/30'
+                                                    }`}>
+                                                    {alert.type === 'consecutive' ? (
+                                                        <Clock className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                                    ) : (
+                                                        <AlertTriangle className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs text-slate-800 dark:text-white font-medium truncate">
+                                                        {alert.student.fullName}
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-600 dark:text-slate-400">
+                                                        {alert.type === 'consecutive'
+                                                            ? `${alert.days} days absent`
+                                                            : `${alert.percentage}% attendance`
+                                                        }
+                                                    </p>
+                                                </div>
+                                                <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                                                    {alert.student.class}-{alert.student.section}
+                                                </span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="text-center py-4">
+                                            <Check className="h-6 w-6 text-green-500 mx-auto mb-1" />
+                                            <p className="text-xs text-slate-600 dark:text-slate-400">No alerts</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -308,13 +617,13 @@ const AttendanceManagement = () => {
                         </div>
 
                         <select
-                            value={classFilter}
-                            onChange={(e) => setClassFilter(e.target.value)}
+                            value={sectionFilter}
+                            onChange={(e) => setSectionFilter(e.target.value)}
                             className="px-4 py-2 bg-white/50 dark:bg-slate-700/50 border border-slate-200/50 dark:border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500/50 text-slate-800 dark:text-white"
                         >
-                            <option value="all">All Classes</option>
-                            {uniqueClasses.map(cls => (
-                                <option key={cls} value={cls}>Class {cls}</option>
+                            <option value="all">All Sections</option>
+                            {uniqueSections.map(section => (
+                                <option key={section} value={section}>Section {section}</option>
                             ))}
                         </select>
                     </div>
@@ -447,6 +756,7 @@ const AttendanceManagement = () => {
                                                                 ? 'bg-green-500 text-white shadow-lg scale-110'
                                                                 : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
                                                                 }`}
+                                                            title="Mark Present"
                                                         >
                                                             <Check className="h-4 w-4" />
                                                         </button>
@@ -456,8 +766,19 @@ const AttendanceManagement = () => {
                                                                 ? 'bg-red-500 text-white shadow-lg scale-110'
                                                                 : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600'
                                                                 }`}
+                                                            title="Mark Absent"
                                                         >
                                                             <X className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleAttendanceChange(mentee._id, selectedDate, null)}
+                                                            className={`p-2 rounded-xl transition-all duration-300 ${!attendanceStatus
+                                                                ? 'bg-amber-500 text-white shadow-lg scale-110'
+                                                                : 'bg-slate-100 dark:bg-slate-700 text-slate-400 hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-600'
+                                                                }`}
+                                                            title="Unmark"
+                                                        >
+                                                            <Minus className="h-4 w-4" />
                                                         </button>
                                                     </div>
                                                 </td>
@@ -506,6 +827,108 @@ const AttendanceManagement = () => {
                     )}
                 </div>
             </div>
+
+            {/* Attendance Insights Modal */}
+            {showAttendanceModal && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+                        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    {modalType === 'low' && (
+                                        <>
+                                            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-xl">
+                                                <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Low Attendance</h3>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Students with less than 50% attendance</p>
+                                            </div>
+                                        </>
+                                    )}
+                                    {modalType === 'good' && (
+                                        <>
+                                            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
+                                                <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Good Attendance</h3>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Students with 70-90% attendance</p>
+                                            </div>
+                                        </>
+                                    )}
+                                    {modalType === 'high' && (
+                                        <>
+                                            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-xl">
+                                                <Award className="h-6 w-6 text-green-600 dark:text-green-400" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-bold text-slate-800 dark:text-white">High Attendance</h3>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">Students with more than 90% attendance</p>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => setShowAttendanceModal(false)}
+                                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                                >
+                                    <X className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+                            {(() => {
+                                const insights = getAttendanceInsights()
+                                const students = modalType === 'low' ? insights.lowAttendance :
+                                    modalType === 'good' ? insights.goodAttendance :
+                                        insights.highAttendance
+
+                                if (students.length === 0) {
+                                    return (
+                                        <div className="text-center py-8">
+                                            <p className="text-slate-600 dark:text-slate-400">No students found in this category</p>
+                                        </div>
+                                    )
+                                }
+
+                                return (
+                                    <div className="space-y-3">
+                                        {students.map((student) => (
+                                            <div
+                                                key={student._id}
+                                                className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:shadow-md transition-all"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">
+                                                        {student.fullName.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-slate-800 dark:text-white">{student.fullName}</p>
+                                                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                            {student.studentId} • Class {student.class}-{student.section}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className={`text-2xl font-bold ${modalType === 'low' ? 'text-red-600 dark:text-red-400' :
+                                                        modalType === 'good' ? 'text-blue-600 dark:text-blue-400' :
+                                                            'text-green-600 dark:text-green-400'
+                                                        }`}>
+                                                        {student.percentage}%
+                                                    </p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">Attendance</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

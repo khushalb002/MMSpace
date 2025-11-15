@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import Layout from '../components/Layout'
 import LoadingSpinner from '../components/LoadingSpinner'
 import api from '../services/api'
-import { Plus, FileText, Check, X, Clock, Eye, AlertCircle, CheckCircle } from 'lucide-react'
+import { Plus, FileText, Check, X, Clock, Eye, AlertCircle, CheckCircle, Download } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { useForm } from 'react-hook-form'
 
@@ -52,6 +52,44 @@ const GrievancePage = () => {
     const filteredGrievances = filter === 'all'
         ? grievances
         : grievances.filter(grievance => grievance.status === filter)
+
+    const handleExportReport = () => {
+        try {
+            // Prepare CSV data
+            const csvHeaders = ['Date', 'Student Name', 'Roll No', 'Subject', 'Type', 'Status', 'Description', 'Resolution']
+            const csvRows = filteredGrievances.map(g => [
+                new Date(g.createdAt).toLocaleDateString(),
+                g.menteeId?.fullName || 'N/A',
+                g.rollNo || g.menteeId?.studentId || 'N/A',
+                g.subject || 'N/A',
+                g.grievanceType || 'N/A',
+                g.status || 'N/A',
+                `"${(g.description || '').replace(/"/g, '""')}"`,
+                `"${(g.resolution || 'Pending').replace(/"/g, '""')}"`
+            ])
+
+            const csvContent = [
+                csvHeaders.join(','),
+                ...csvRows.map(row => row.join(','))
+            ].join('\n')
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const link = document.createElement('a')
+            const url = URL.createObjectURL(blob)
+            link.setAttribute('href', url)
+            link.setAttribute('download', `grievances_report_${new Date().toISOString().split('T')[0]}.csv`)
+            link.style.visibility = 'hidden'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+
+            toast.success('Report exported successfully!')
+        } catch (error) {
+            console.error('Export error:', error)
+            toast.error('Failed to export report')
+        }
+    }
 
     const handleCreateGrievance = async (data) => {
         try {
@@ -206,15 +244,26 @@ const GrievancePage = () => {
                                 }
                             </p>
                         </div>
-                        {user.role === 'mentee' && (
-                            <button
-                                onClick={() => setShowCreateModal(true)}
-                                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                            >
-                                <Plus className="h-5 w-5 mr-2" />
-                                Submit Grievance
-                            </button>
-                        )}
+                        <div className="flex gap-3">
+                            {user.role === 'mentor' && (
+                                <button
+                                    onClick={handleExportReport}
+                                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-2xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                                >
+                                    <Download className="h-5 w-5 mr-2" />
+                                    Export Report
+                                </button>
+                            )}
+                            {user.role === 'mentee' && (
+                                <button
+                                    onClick={() => setShowCreateModal(true)}
+                                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                                >
+                                    <Plus className="h-5 w-5 mr-2" />
+                                    Submit Grievance
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -278,7 +327,7 @@ const GrievancePage = () => {
                                                 </span>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="mt-3 text-sm text-slate-700 dark:text-slate-300 line-clamp-2">
                                             {grievance.description}
                                         </div>
@@ -320,7 +369,7 @@ const GrievancePage = () => {
                                                 <div className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center ${grievance.studentResolutionConfirmation === 'yes'
                                                     ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                                                     : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                                                }`}>
+                                                    }`}>
                                                     {grievance.studentResolutionConfirmation === 'yes' ? (
                                                         <>
                                                             <Check className="h-4 w-4 mr-1" />
@@ -340,7 +389,7 @@ const GrievancePage = () => {
                                                 <div className={`px-4 py-2 rounded-xl font-medium text-sm flex items-center ${grievance.studentResolutionConfirmation === 'yes'
                                                     ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
                                                     : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                                                }`}>
+                                                    }`}>
                                                     {grievance.studentResolutionConfirmation === 'yes' ? (
                                                         <>
                                                             <Check className="h-4 w-4 mr-1" />
@@ -772,7 +821,7 @@ const GrievancePage = () => {
                         <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">
                             Resolve Grievance
                         </h3>
-                        
+
                         <div className="mb-4">
                             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
                                 Submitted by: <span className="font-semibold">{resolvingGrievance.name}</span>
@@ -791,12 +840,12 @@ const GrievancePage = () => {
                             const resolutionType = formData.get('resolutionType')
                             const customResolution = formData.get('customResolution')
                             const comments = formData.get('comments')
-                            
+
                             let resolution = resolutionType
                             if (resolutionType === 'custom') {
                                 resolution = customResolution
                             }
-                            
+
                             submitResolution({
                                 resolution,
                                 comments: comments || resolution

@@ -93,6 +93,47 @@ const AdminGrievancesPage = () => {
         return matchesSearch && matchesStatus && matchesCategory
     })
 
+    const handleExportReport = () => {
+        try {
+            // Prepare CSV data
+            const csvHeaders = ['Date', 'Student Name', 'Roll No', 'Subject', 'Type', 'Category', 'Priority', 'Status', 'Description', 'Resolution', 'Mentor']
+            const csvRows = filteredGrievances.map(g => [
+                new Date(g.createdAt).toLocaleDateString(),
+                g.menteeId?.fullName || 'N/A',
+                g.rollNo || g.menteeId?.studentId || 'N/A',
+                g.subject || g.title || 'N/A',
+                g.grievanceType || 'N/A',
+                g.category || 'N/A',
+                g.priority || 'N/A',
+                g.status || 'N/A',
+                `"${(g.description || '').replace(/"/g, '""')}"`,
+                `"${(g.resolution || 'Pending').replace(/"/g, '""')}"`,
+                g.mentorId?.fullName || 'N/A'
+            ])
+
+            const csvContent = [
+                csvHeaders.join(','),
+                ...csvRows.map(row => row.join(','))
+            ].join('\n')
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const link = document.createElement('a')
+            const url = URL.createObjectURL(blob)
+            link.setAttribute('href', url)
+            link.setAttribute('download', `admin_grievances_report_${new Date().toISOString().split('T')[0]}.csv`)
+            link.style.visibility = 'hidden'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+
+            toast.success('Report exported successfully!')
+        } catch (error) {
+            console.error('Export error:', error)
+            toast.error('Failed to export report')
+        }
+    }
+
     const getStatusColor = (status) => {
         switch (status) {
             case 'resolved': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
@@ -162,7 +203,10 @@ const AdminGrievancesPage = () => {
                             </p>
                         </div>
 
-                        <button className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                        <button
+                            onClick={handleExportReport}
+                            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
                             <Download className="h-4 w-4 mr-2" />
                             Export Report
                         </button>

@@ -76,7 +76,30 @@ const CustomCalendar = ({ selectedDate, onDateSelect, className = '' }) => {
     }
 
     const formatDateForInput = (date) => {
-        return date.toISOString().split('T')[0]
+        // Use local date to avoid timezone offset issues
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
+    const isSelectedToday = () => {
+        if (!selectedDate) return false
+        const today = new Date()
+        const selected = new Date(selectedDate)
+        return selected.getDate() === today.getDate() &&
+            selected.getMonth() === today.getMonth() &&
+            selected.getFullYear() === today.getFullYear()
+    }
+
+    const isSelectedYesterday = () => {
+        if (!selectedDate) return false
+        const yesterday = new Date()
+        yesterday.setDate(yesterday.getDate() - 1)
+        const selected = new Date(selectedDate)
+        return selected.getDate() === yesterday.getDate() &&
+            selected.getMonth() === yesterday.getMonth() &&
+            selected.getFullYear() === yesterday.getFullYear()
     }
 
     // Generate years from 2000 to 2050 with pagination
@@ -281,7 +304,10 @@ const CustomCalendar = ({ selectedDate, onDateSelect, className = '' }) => {
                             setCurrentMonth(today)
                             onDateSelect(formatDateForInput(today))
                         }}
-                        className="flex-1 px-3 py-2 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                        className={`flex-1 px-3 py-2 text-sm rounded-xl transition-all duration-200 ${isSelectedToday()
+                                ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg font-semibold'
+                                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                            }`}
                     >
                         Today
                     </button>
@@ -292,7 +318,10 @@ const CustomCalendar = ({ selectedDate, onDateSelect, className = '' }) => {
                             setCurrentMonth(yesterday)
                             onDateSelect(formatDateForInput(yesterday))
                         }}
-                        className="flex-1 px-3 py-2 text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+                        className={`flex-1 px-3 py-2 text-sm rounded-xl transition-all duration-200 ${isSelectedYesterday()
+                                ? 'bg-gradient-to-r from-slate-500 to-slate-600 text-white shadow-lg font-semibold'
+                                : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                            }`}
                     >
                         Yesterday
                     </button>

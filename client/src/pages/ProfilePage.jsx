@@ -370,30 +370,32 @@ const ProfilePage = () => {
                 </div>
             </div>
 
-            {/* Attendance */}
-            <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
-                <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Attendance Overview</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl p-6 text-center shadow-lg">
-                        <p className="text-3xl font-bold text-white mb-2">
-                            {profile.attendance?.totalDays || 0}
-                        </p>
-                        <p className="text-slate-200 font-medium">Total Days</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-center shadow-lg">
-                        <p className="text-3xl font-bold text-white mb-2">
-                            {profile.attendance?.presentDays || 0}
-                        </p>
-                        <p className="text-green-100 font-medium">Present Days</p>
-                    </div>
-                    <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-center shadow-lg">
-                        <p className="text-3xl font-bold text-white mb-2">
-                            {profile.attendance?.percentage || 0}%
-                        </p>
-                        <p className="text-blue-100 font-medium">Percentage</p>
+            {/* Attendance - Only for mentees */}
+            {user.role === 'mentee' && (
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50 p-8">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Attendance Overview</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-gradient-to-br from-slate-500 to-slate-600 rounded-2xl p-6 text-center shadow-lg">
+                            <p className="text-3xl font-bold text-white mb-2">
+                                {profile.attendance?.totalDays || 0}
+                            </p>
+                            <p className="text-slate-200 font-medium">Total Days</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-center shadow-lg">
+                            <p className="text-3xl font-bold text-white mb-2">
+                                {profile.attendance?.presentDays || 0}
+                            </p>
+                            <p className="text-green-100 font-medium">Present Days</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-center shadow-lg">
+                            <p className="text-3xl font-bold text-white mb-2">
+                                {profile.attendance?.percentage || 0}%
+                            </p>
+                            <p className="text-blue-100 font-medium">Percentage</p>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Parent Information */}
             {profile.parentInfo && (

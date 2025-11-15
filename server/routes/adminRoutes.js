@@ -62,6 +62,9 @@ router.get('/users', auth, roleCheck(['admin']), async (req, res) => {
         if (role && role !== 'all') {
             query.role = role;
         }
+
+        // Enhanced search - search by email only at User level
+        // Profile-level search will be done after fetching
         if (search) {
             query.email = { $regex: search, $options: 'i' };
         }

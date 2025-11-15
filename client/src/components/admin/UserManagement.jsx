@@ -62,12 +62,11 @@ const UserManagement = () => {
     }, [currentPage, roleFilter])
 
     // Debounce search to avoid too many API calls
+    // Debounced search - no need to refetch, just filter client-side
     useEffect(() => {
-        const timeoutId = setTimeout(() => {
+        if (searchTerm) {
             setCurrentPage(1) // Reset to first page when searching
-            fetchUsers()
-        }, 500)
-        return () => clearTimeout(timeoutId)
+        }
     }, [searchTerm])
 
     const fetchUsers = async () => {
@@ -75,9 +74,9 @@ const UserManagement = () => {
             setLoading(true)
             const params = new URLSearchParams({
                 page: currentPage,
-                limit: 12,
-                ...(roleFilter !== 'all' && { role: roleFilter }),
-                ...(searchTerm && { search: searchTerm })
+                limit: 100, // Fetch more users for better client-side filtering
+                ...(roleFilter !== 'all' && { role: roleFilter })
+                // Removed search param - doing client-side filtering instead
             })
 
             const response = await api.get(`/admin/users?${params}`)
@@ -272,8 +271,30 @@ const UserManagement = () => {
     }
 
     const filteredUsers = users.filter(user => {
+        // Status filter
         if (statusFilter === 'active' && !user.isActive) return false
         if (statusFilter === 'inactive' && user.isActive) return false
+
+        // Search filter (client-side for better UX)
+        if (searchTerm) {
+            const search = searchTerm.toLowerCase()
+            const email = user.email?.toLowerCase() || ''
+            const fullName = user.profile?.fullName?.toLowerCase() || ''
+            const studentId = user.profile?.studentId?.toLowerCase() || ''
+            const employeeId = user.profile?.employeeId?.toLowerCase() || ''
+            const department = user.profile?.department?.toLowerCase() || ''
+            const className = user.profile?.class?.toLowerCase() || ''
+            const phone = user.profile?.phone?.toLowerCase() || ''
+
+            return email.includes(search) ||
+                fullName.includes(search) ||
+                studentId.includes(search) ||
+                employeeId.includes(search) ||
+                department.includes(search) ||
+                className.includes(search) ||
+                phone.includes(search)
+        }
+
         return true
     })
 

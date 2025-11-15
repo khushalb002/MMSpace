@@ -78,6 +78,48 @@ const AdminLeavesPage = () => {
         return matchesSearch && matchesStatus && matchesType
     })
 
+    const handleExportReport = () => {
+        try {
+            // Prepare CSV data
+            const csvHeaders = ['Date', 'Student Name', 'Roll No', 'Leave Type', 'Start Date', 'End Date', 'Days', 'Status', 'Reason', 'Mentor', 'Approved By', 'Comments']
+            const csvRows = filteredLeaves.map(l => [
+                new Date(l.createdAt).toLocaleDateString(),
+                l.menteeId?.fullName || 'N/A',
+                l.menteeId?.studentId || 'N/A',
+                l.leaveType || 'N/A',
+                new Date(l.startDate).toLocaleDateString(),
+                new Date(l.endDate).toLocaleDateString(),
+                l.daysCount || 0,
+                l.status || 'N/A',
+                `"${(l.reason || '').replace(/"/g, '""')}"`,
+                l.mentorId?.fullName || 'N/A',
+                l.approvedBy?.fullName || 'N/A',
+                `"${(l.mentorComments || '').replace(/"/g, '""')}"`
+            ])
+
+            const csvContent = [
+                csvHeaders.join(','),
+                ...csvRows.map(row => row.join(','))
+            ].join('\n')
+
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+            const link = document.createElement('a')
+            const url = URL.createObjectURL(blob)
+            link.setAttribute('href', url)
+            link.setAttribute('download', `admin_leaves_report_${new Date().toISOString().split('T')[0]}.csv`)
+            link.style.visibility = 'hidden'
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+
+            toast.success('Report exported successfully!')
+        } catch (error) {
+            console.error('Export error:', error)
+            toast.error('Failed to export report')
+        }
+    }
+
     const getStatusColor = (status) => {
         switch (status) {
             case 'approved': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
@@ -136,7 +178,10 @@ const AdminLeavesPage = () => {
                             </p>
                         </div>
 
-                        <button className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                        <button
+                            onClick={handleExportReport}
+                            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                        >
                             <Download className="h-4 w-4 mr-2" />
                             Export Report
                         </button>
