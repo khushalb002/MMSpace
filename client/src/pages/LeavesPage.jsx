@@ -85,11 +85,11 @@ const LeavesPage = () => {
     const getStatusIcon = (status) => {
         switch (status) {
             case 'approved':
-                return <Check className="h-4 w-4 text-green-600" />
+                return <Check className="h-4 w-4 text-white" />
             case 'rejected':
-                return <X className="h-4 w-4 text-red-600" />
+                return <X className="h-4 w-4 text-white" />
             default:
-                return <Clock className="h-4 w-4 text-yellow-600" />
+                return <Clock className="h-4 w-4 text-white" />
         }
     }
 
