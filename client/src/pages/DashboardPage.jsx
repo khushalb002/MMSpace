@@ -719,197 +719,227 @@ const DashboardPage = () => {
 
         return (
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Guardian Dashboard</h1>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                        Stay informed about your student's progress and communications.
-                    </p>
-                </div>
-
+                {/* Primary Stats - Key Metrics */}
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                    <div className="relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+                    {/* Linked Students Card */}
+                    <div className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer border border-emerald-200/50 dark:border-emerald-500/30">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500/20 to-teal-600/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
                         <div className="relative p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-emerald-100 text-sm font-medium">Linked Students</p>
-                                    <p className="text-white text-3xl font-bold mt-1">
-                                        {guardianMentees.length}
-                                    </p>
-                                    <p className="text-emerald-100 text-xs mt-1">Active connections</p>
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                    <Users className="h-6 w-6 text-white" />
                                 </div>
-                                <div className="bg-white/20 p-3 rounded-full">
-                                    <Users className="h-8 w-8 text-white" />
+                                <span className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold rounded-full">
+                                    Active
+                                </span>
+                            </div>
+                            <div>
+                                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Linked Students</p>
+                                <p className="text-slate-900 dark:text-white text-4xl font-bold mb-2">
+                                    {guardianMentees.length}
+                                </p>
+                                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+                                    <Users className="h-3 w-3 mr-1 text-emerald-500" />
+                                    <span>Active connections</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="relative overflow-hidden bg-gradient-to-br from-orange-500 to-amber-500 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+                    {/* Open Complaints Card */}
+                    <div 
+                        onClick={() => navigate('/grievances')}
+                        className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer border border-amber-200/50 dark:border-amber-500/30"
+                    >
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-500/20 to-orange-600/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
                         <div className="relative p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-orange-100 text-sm font-medium">Open Complaints</p>
-                                    <p className="text-white text-3xl font-bold mt-1">
-                                        {stats.pendingGrievances || 0}
-                                    </p>
-                                    <p className="text-orange-100 text-xs mt-1">Pending or in review</p>
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                    <FileText className="h-6 w-6 text-white" />
                                 </div>
-                                <div className="bg-white/20 p-3 rounded-full">
-                                    <FileText className="h-8 w-8 text-white" />
+                                <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-semibold rounded-full">
+                                    Pending
+                                </span>
+                            </div>
+                            <div>
+                                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Open Complaints</p>
+                                <p className="text-slate-900 dark:text-white text-4xl font-bold mb-2">
+                                    {stats.pendingGrievances || 0}
+                                </p>
+                                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+                                    <FileText className="h-3 w-3 mr-1 text-amber-500" />
+                                    <span>Awaiting resolution</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="relative overflow-hidden bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-                        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+                    {/* Resolved Complaints Card */}
+                    <div className="group relative overflow-hidden bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-blue-200/50 dark:border-blue-500/30">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-indigo-600/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
                         <div className="relative p-6">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-blue-100 text-sm font-medium">Resolved Complaints</p>
-                                    <p className="text-white text-3xl font-bold mt-1">
-                                        {stats.resolvedGrievances || 0}
-                                    </p>
-                                    <p className="text-blue-100 text-xs mt-1">Successfully addressed</p>
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                    <Shield className="h-6 w-6 text-white" />
                                 </div>
-                                <div className="bg-white/20 p-3 rounded-full">
-                                    <Shield className="h-8 w-8 text-white" />
+                                <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded-full">
+                                    Resolved
+                                </span>
+                            </div>
+                            <div>
+                                <p className="text-slate-600 dark:text-slate-400 text-sm font-medium mb-1">Resolved Complaints</p>
+                                <p className="text-slate-900 dark:text-white text-4xl font-bold mb-2">
+                                    {stats.resolvedGrievances || 0}
+                                </p>
+                                <div className="flex items-center text-xs text-slate-500 dark:text-slate-400">
+                                    <Shield className="h-3 w-3 mr-1 text-blue-500" />
+                                    <span>Successfully addressed</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50">
-                    <div className="px-6 py-6 sm:p-8">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-                                <Users className="h-6 w-6 mr-3 text-emerald-500 dark:text-emerald-300" />
-                                Your Students ({guardianMentees.length})
-                            </h3>
-                            <button
-                                onClick={() => navigate('/chat')}
-                                className="text-sm text-emerald-600 dark:text-emerald-300 hover:text-emerald-500 dark:hover:text-emerald-200 font-medium bg-emerald-50/50 dark:bg-emerald-900/20 px-3 py-2 rounded-xl transition-all duration-300"
-                            >
-                                Open Chat
-                            </button>
+                {/* Your Students Section */}
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="relative bg-gradient-to-r from-emerald-500 to-teal-600 p-5">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
+                                    <Users className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Your Students</h3>
+                                    <p className="text-emerald-100 text-xs">Linked accounts</p>
+                                </div>
+                            </div>
+                            <div className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full">
+                                <span className="text-white text-sm font-semibold">{guardianMentees.length}</span>
+                            </div>
                         </div>
-
-                        <div className="space-y-4">
+                    </div>
+                    <div className="p-5">
+                        <div className="space-y-3">
                             {guardianMentees.length > 0 ? guardianMentees.map((mentee, index) => (
                                 <div
                                     key={mentee._id || index}
-                                    className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4 border border-white/20 dark:border-slate-600/30 hover:shadow-lg transition-all duration-300 message-bubble"
-                                    style={{ animationDelay: `${index * 0.1}s` }}
+                                    className="group/item flex items-start space-x-3 p-3 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/30 dark:to-slate-700/20 hover:from-emerald-50 hover:to-teal-50 dark:hover:from-emerald-900/20 dark:hover:to-teal-900/20 border border-slate-200/50 dark:border-slate-600/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-4 flex-1 min-w-0">
-                                            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold shadow-lg">
-                                                {mentee.fullName?.charAt(0)}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <h4 className="text-sm font-semibold text-slate-800 dark:text-white truncate">
-                                                    {mentee.fullName}
-                                                </h4>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                                    ID: {mentee.studentId} • Class {mentee.class}-{mentee.section}
-                                                </p>
-                                                {mentee.mentorId && (
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                        Mentor: {mentee.mentorId.fullName}
-                                                    </p>
-                                                )}
-                                            </div>
+                                    <div className="flex-shrink-0">
+                                        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold shadow-lg transition-transform group-hover/item:scale-110">
+                                            {mentee.fullName?.charAt(0)}
                                         </div>
-                                        <div className="flex space-x-2 ml-4">
-                                            {mentee.mentorId && (
-                                                <button
-                                                    onClick={() => navigate(`/chat/individual_${mentee._id}`)}
-                                                    className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all duration-300 hover:scale-110"
-                                                    title="Chat with mentor"
-                                                >
-                                                    <MessageSquare className="h-4 w-4" />
-                                                </button>
-                                            )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                                            {mentee.fullName}
+                                        </p>
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                                            ID: {mentee.studentId} • Class {mentee.class}-{mentee.section}
+                                        </p>
+                                        {mentee.mentorId && (
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                                Mentor: {mentee.mentorId.fullName}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div className="flex space-x-2 ml-4">
+                                        {mentee.mentorId && (
                                             <button
-                                                onClick={() => navigate('/grievances')}
-                                                className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all duration-300 hover:scale-110"
-                                                title="View grievances"
+                                                onClick={() => navigate(`/chat/individual_${mentee._id}`)}
+                                                className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-900/50 transition-all duration-300 hover:scale-110"
+                                                title="Chat with mentor"
                                             >
-                                                <FileText className="h-4 w-4" />
+                                                <MessageSquare className="h-4 w-4" />
                                             </button>
-                                        </div>
+                                        )}
+                                        <button
+                                            onClick={() => navigate('/grievances')}
+                                            className="p-2 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all duration-300 hover:scale-110"
+                                            title="View grievances"
+                                        >
+                                            <FileText className="h-4 w-4" />
+                                        </button>
                                     </div>
                                 </div>
                             )) : (
-                                <div className="text-center py-8">
-                                    <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                                        No linked students yet. Contact the administrator for assistance.
-                                    </p>
+                                <div className="text-center py-12">
+                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700/50 mb-3">
+                                        <Users className="h-8 w-8 text-slate-400" />
+                                    </div>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No linked students</p>
+                                    <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Contact administrator for assistance</p>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-2xl rounded-3xl border border-white/20 dark:border-slate-700/50">
-                    <div className="px-6 py-6 sm:p-8">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center">
-                                <FileText className="h-6 w-6 mr-3 text-orange-500 dark:text-orange-300" />
-                                Recent Complaints
-                            </h3>
-                            <button
-                                onClick={() => navigate('/grievances')}
-                                className="text-sm text-orange-600 dark:text-orange-300 hover:text-orange-500 dark:hover:text-orange-200 font-medium bg-orange-50/50 dark:bg-orange-900/20 px-3 py-2 rounded-xl transition-all duration-300"
-                            >
-                                View All
-                            </button>
+                {/* Recent Complaints Section */}
+                <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl shadow-xl rounded-2xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                    <div className="relative bg-gradient-to-r from-amber-500 to-orange-600 p-5">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                        <div className="relative flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl">
+                                    <FileText className="h-5 w-5 text-white" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Recent Complaints</h3>
+                                    <p className="text-amber-100 text-xs">Latest submissions</p>
+                                </div>
+                            </div>
+                            <div className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full">
+                                <span className="text-white text-sm font-semibold">{recentGrievances.length}</span>
+                            </div>
                         </div>
-
-                        {recentGrievances.length > 0 ? (
-                            <div className="space-y-4">
-                                {recentGrievances.map((grievance, index) => (
+                    </div>
+                    <div className="p-5">
+                        <div className="space-y-3">{recentGrievances.length > 0 ? (
+                                recentGrievances.map((grievance, index) => (
                                     <div
                                         key={grievance._id}
-                                        className="bg-white/50 dark:bg-slate-700/50 backdrop-blur-sm rounded-2xl p-4 border border-white/20 dark:border-slate-600/30 hover:shadow-lg transition-all duration-300 message-bubble"
-                                        style={{ animationDelay: `${index * 0.1}s` }}
+                                        className="group/item flex items-start space-x-3 p-3 rounded-xl bg-gradient-to-r from-slate-50 to-slate-100/50 dark:from-slate-700/30 dark:to-slate-700/20 hover:from-amber-50 hover:to-orange-50 dark:hover:from-amber-900/20 dark:hover:to-orange-900/20 border border-slate-200/50 dark:border-slate-600/30 transition-all duration-300 hover:scale-[1.02] hover:shadow-md"
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                                                    {grievance.subject}
-                                                </p>
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                                    {grievance.menteeId?.fullName} • {new Date(grievance.createdAt).toLocaleDateString()}
-                                                </p>
+                                        <div className="flex-shrink-0">
+                                            <div className={`h-10 w-10 rounded-lg flex items-center justify-center shadow-lg transition-transform group-hover/item:scale-110 ${
+                                                grievance.status === 'resolved' ? 'bg-gradient-to-br from-green-500 to-emerald-600' :
+                                                grievance.status === 'rejected' ? 'bg-gradient-to-br from-red-500 to-pink-600' :
+                                                'bg-gradient-to-br from-amber-500 to-orange-600'
+                                            }`}>
+                                                <FileText className="h-5 w-5 text-white" />
                                             </div>
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${grievance.status === 'resolved'
-                                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                                                : grievance.status === 'rejected'
-                                                    ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                                                    : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-                                                }`}>
-                                                {grievance.status === 'in-review' ? 'In Review' : grievance.status}
-                                            </span>
                                         </div>
-                                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-2 line-clamp-2">
-                                            {grievance.description}
-                                        </p>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                                                {grievance.subject}
+                                            </p>
+                                            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                                                {grievance.menteeId?.fullName} • {new Date(grievance.dateOfIncident).toLocaleDateString()}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold capitalize ${
+                                                    grievance.status === 'pending' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' :
+                                                    grievance.status === 'in-review' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
+                                                    grievance.status === 'resolved' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' :
+                                                    'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                                }`}>
+                                                    {grievance.status}
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-8">
-                                <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                                <p className="text-sm text-slate-500 dark:text-slate-400">
-                                    No complaints submitted yet.
-                                </p>
-                            </div>
-                        )}
+                                ))
+                            ) : (
+                                <div className="text-center py-12">
+                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-700/50 mb-3">
+                                        <FileText className="h-8 w-8 text-slate-400" />
+                                    </div>
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No recent complaints</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
