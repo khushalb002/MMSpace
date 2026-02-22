@@ -48,18 +48,17 @@ We built the prediction engine using **TensorFlow/Keras**:
 
 ## 3. The Backend Communication
 
-### The Python Microservice (`app.py`)
-A lighting-fast **FastAPI** server powers the model inference in real-time.
-*   **Startup Lifecycle:** On boot (`uvicorn app:app`), the server pre-loads the heavy `.keras` model and the `.pkl` metadata into memory. This eliminates disk-read latency when a student requests a prediction.
-*   **Endpoint (`POST /predict`):** Utilizing a `Pydantic` schema (`StudentMetrics`), the API strictly validates the incoming JSON request shape. It scales the inputs, runs the input matrix through the hidden layers of the loaded TensorFlow model, and returns a JSON payload containing exactly: `prediction` ("Placed"/"Not Placed") and the `probability` decimal.
+### The Python Environment (Training Only)
+The Python environment (`ml_service`) is now **only required for training the model and exporting weights**.
+*   **Startup Lifecycle:** When `train_model.py` finishes, we use a utility script `export_weights.py` to extract the strict numeric arrays of the exact Keras dense layers, biases, and scalers. We save this lightweight data as `weights.json` and `scaler.json` directly into the Node `server` folder.
 
-### The Node.js Gateway (`server/routes/placementRoutes.js`)
-The React frontend never speaks to the Python microservice directly (which avoids port confusion and CORS security errors).
-Instead, your primary MMSpace Express server acts as a proxy:
+### The Node.js Native Inference (`server/utils/predictPlacement.js`)
+To avoid the overhead, latency, and extreme memory costs of running a heavy Python FastAPI+TensorFlow server on Render's free tier, **the entire Deep Learning model executes natively inside Node.js**.
 1.  The Node.js server exposes `POST /api/placement/predict`.
-2.  When a request hits Node, it validates the authentication/fields.
-3.  Node internally executes an `axios` HTTP request to the isolated Python Microservice cluster (`http://localhost:8000/predict`).
-4.  Node relays the Microservice's response back to the user seamlessly.
+2.  Upon a request, Node instantly loads the `weights.json` and `scaler.json`.
+3.  We wrote a highly optimized, raw JavaScript implementation of the Neural Network math: standardizing the input arrays, computing dot-products against the weights, adding biases, and executing `ReLU` and `Sigmoid` activations across the densely connected hidden layers. 
+4.  This generates identical accuracy to the original TensorFlow model in **sub-millisecond execution times**, requiring zero external network requests.
+5.  Node relays the JSON probability back to the user seamlessly.
 
 ---
 
@@ -84,20 +83,16 @@ The user interface was built to align closely with the MMSpace internal aestheti
 sequenceDiagram
     participant User (React UI)
     participant Node.js Backend
-    participant FastAPI Microservice
-    participant ML Model (Keras)
+    participant Native JS Math Engine
 
     User (React UI)->>Node.js Backend: Submits Form (CGPA, DSA, Backlogs)
     activate Node.js Backend
-    Node.js Backend->>FastAPI Microservice: Axios POST (/predict)
-    activate FastAPI Microservice
-    FastAPI Microservice->>ML Model (Keras): Scales features & applies weights
-    activate ML Model (Keras)
-    ML Model (Keras)-->>FastAPI Microservice: Returns Probability (0.0 to 1.0)
-    deactivate ML Model (Keras)
-    FastAPI Microservice-->>Node.js Backend: JSON {prediction, probability}
-    deactivate FastAPI Microservice
-    Node.js Backend-->>User (React UI): Relays JSON
+    Node.js Backend->>Native JS Math Engine: Passes formatted attributes
+    activate Native JS Math Engine
+    Native JS Math Engine->>Native JS Math Engine: Matrix dot products (ReLU, Sigmoid)
+    Native JS Math Engine-->>Node.js Backend: Returns Probability (0.0 to 1.0)
+    deactivate Native JS Math Engine
+    Node.js Backend-->>User (React UI): JSON {prediction, probability}
     deactivate Node.js Backend
     User (React UI)->>User (React UI): Renders Card & Generates dynamic Insights
 ```

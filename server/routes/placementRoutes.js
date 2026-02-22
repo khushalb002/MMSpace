@@ -16,23 +16,16 @@ router.post('/predict', async (req, res) => {
             }
         }
 
-        // Call Python Microservice
-        // Use environment variable if available, otherwise default to localhost:8000
-        const pythonServiceUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
-
-        const response = await axios.post(`${pythonServiceUrl}/predict`, studentMetrics);
+        // Call Native JS TensorFlow prediction engine instead of Python server
+        const { predictPlacementNative } = require('../utils/predictPlacement');
+        const predictionData = await predictPlacementNative(studentMetrics);
 
         // Return prediction to the frontend
-        res.status(200).json(response.data);
+        res.status(200).json(predictionData);
 
     } catch (error) {
-        console.error('Error getting placement prediction:', error.message);
-        // Handle axios errors
-        if (error.response) {
-            res.status(error.response.status).json(error.response.data);
-        } else {
-            res.status(500).json({ message: 'Internal Server Error while connecting to ML service' });
-        }
+        console.error('Error getting placement prediction natively:', error);
+        res.status(500).json({ message: 'Internal Server Error while calculating placement logic natively.' });
     }
 });
 
