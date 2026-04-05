@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+pandas
+numpy
+scikit-learn
+tensorflow
+mrmr-selection
+openpyxl
+xlrd
+requests

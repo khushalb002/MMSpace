@@ -2,8 +2,8 @@ services:
   - type: web
     name: mmspace-server
     env: docker
-    dockerfilePath: ./server/Dockerfile
-    dockerContext: ./server
+    dockerfilePath: ./deploy/Dockerfile.render
+    dockerContext: ./
     plan: free
     region: singapore
     branch: main

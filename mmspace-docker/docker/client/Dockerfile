@@ -12,6 +12,12 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Inject Vite build-time environment values
+ARG VITE_API_URL=/api
+ARG VITE_SOCKET_URL=http://localhost:3000
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_SOCKET_URL=${VITE_SOCKET_URL}
+
 # Build the application
 RUN npm run build
 

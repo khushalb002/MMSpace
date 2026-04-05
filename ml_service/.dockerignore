@@ -1,0 +1,15 @@
+# Python virtual env and caches
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+
+# Tooling / VCS
+.git
+.gitignore
+
+# Optional local artifacts not needed in runtime image
+*.log

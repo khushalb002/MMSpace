@@ -1,8 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "Building MMSpace Docker containers..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Build all services
-docker-compose build --no-cache
+cd "$PROJECT_DIR"
 
-echo "Build completed successfully!"
+echo "Building MMSpace Docker images..."
+docker compose build --no-cache
+
+echo "Build completed successfully."

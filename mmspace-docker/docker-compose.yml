@@ -1,7 +1,4 @@
-version: '3.8'
-
 services:
-  # MongoDB Database
   mongodb:
     image: mongo:7.0
     container_name: mmspace-mongodb
@@ -17,8 +14,29 @@ services:
       - "27018:27017"
     networks:
       - mmspace-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--username", "admin", "--password", "password123", "--authenticationDatabase", "admin", "--eval", "db.adminCommand('ping')"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
 
-  # Backend Server
+  ml-service:
+    build:
+      context: ../ml_service
+      dockerfile: ../mmspace-docker/docker/ml_service/Dockerfile
+    container_name: mmspace-ml-service
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+      TF_CPP_MIN_LOG_LEVEL: "2"
+    networks:
+      - mmspace-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+
   server:
     build:
       context: ../server
@@ -26,19 +44,23 @@ services:
     container_name: mmspace-server
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
-      - PORT=5000
-      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/mmspace?authSource=admin
-      - JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-      - CLIENT_URL=http://localhost:3000
+      NODE_ENV: production
+      PORT: "5000"
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/mmspace?authSource=admin
+      JWT_SECRET: your_super_secret_jwt_key_change_this_in_production
+      CLIENT_URL: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000
+      ML_SERVICE_URL: http://ml-service:8000
+    command: sh -c "npm run seed:if-empty && npm start"
     volumes:
-      - ../server:/usr/src/app
-      - /usr/src/app/node_modules
       - server_uploads:/usr/src/app/uploads
     ports:
-      - "5000:5000"
+      - "5001:5000"
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
     networks:
       - mmspace-network
     healthcheck:
@@ -47,20 +69,20 @@ services:
       timeout: 10s
       retries: 3
 
-  # Frontend Client
   client:
     build:
       context: ../client
       dockerfile: ../mmspace-docker/docker/client/Dockerfile
       args:
-        - VITE_API_URL=http://localhost:5000/api
-        - VITE_SOCKET_URL=http://localhost:5000
+        VITE_API_URL: /api
+        VITE_SOCKET_URL: http://localhost:3000
     container_name: mmspace-client
     restart: unless-stopped
     ports:
       - "3000:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
     networks:
       - mmspace-network
 

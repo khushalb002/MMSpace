@@ -19,6 +19,14 @@ model = None
 scaler = None
 feature_names = None
 
+@app.get("/health")
+def health_check():
+    return {
+        "status": "ok",
+        "model_loaded": model is not None,
+        "scaler_loaded": scaler is not None
+    }
+
 @app.on_event("startup")
 def load_assets():
     global model, scaler, feature_names
@@ -83,4 +91,5 @@ def predict_placement(metrics: StudentMetrics):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)

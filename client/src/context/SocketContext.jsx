@@ -11,7 +11,11 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         if (isAuthenticated && token) {
-            const socketUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'
+            const socketUrl =
+                import.meta.env.VITE_SOCKET_URL ||
+                import.meta.env.VITE_API_URL?.replace('/api', '') ||
+                window.location.origin ||
+                'http://localhost:5000'
             const newSocket = io(socketUrl, {
                 auth: { token }
             })

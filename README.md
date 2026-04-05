@@ -1,264 +1,341 @@
-# MMSpace - Mentor-Mentee Management Platform
+# MMSpace
 
-A comprehensive platform for managing mentor-mentee relationships, facilitating communication, tracking attendance, and managing leave requests.
+MMSpace is a mentor-mentee management platform for institutes and training programs. It combines role-based workflows (admin, mentor, mentee, guardian), real-time communication, attendance and leave tracking, grievance handling, and an AI-powered placement predictor.
 
----
+## Navigation
 
-## 🚀 Key Features
+- [What This Repository Contains](#what-this-repository-contains)
+- [Core Features](#core-features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Repository Structure](#repository-structure)
+- [Prerequisites](#prerequisites)
+- [Local Setup](#local-setup)
+- [Seeding Demo Data](#seeding-demo-data)
+- [Important Functional Flows](#important-functional-flows)
+- [Health and Debugging](#health-and-debugging)
+- [Deployment (Production)](#deployment-production)
+- [Docker (Local Alternative)](#docker-local-alternative)
+- [Known Issues and Backlog](#known-issues-and-backlog)
+- [Testing Checklist](#testing-checklist)
+- [Contributing](#contributing)
 
-### User Management
+## What This Repository Contains
 
-- **Role-based Access Control**
-  - Admin, Mentor, and Mentee roles
-  - Secure authentication and authorization
-  - User profile management
+- React + Vite frontend (`client`)
+- Node.js + Express backend (`server`)
+- Python FastAPI ML microservice (`ml_service`) for placement prediction
+- MongoDB data layer
+- Socket.IO real-time messaging and notifications
 
-### Mentor-Mentee Matching
+## Core Features
 
-- Smart mentor-mentee pairing
-- Easy reassignment when needed
-- Performance tracking
+### User and Access Management
+- Role-based authentication and authorization
+- Admin user management (enable/disable, update, delete)
+- Mentor-mentee assignment management by admin
+- Mentor profile editing (email, phone, qualifications, citations/publications)
 
-### Attendance Tracking
+### Communication
+- Real-time chat using Socket.IO
+- Group messaging with proper mentee delivery
+- Individual mentor-mentee chat
+- Announcement feed with comment support
 
-- Real-time attendance monitoring
-- Detailed attendance reports
-- Analytics and insights
+### Academic and Operations
+- Attendance tracking and attendance management views
+- Leave request workflow (submit, review, approve/reject)
+- Grievance workflow (submit, review, resolve/reject)
+- Admin analytics dashboard and system overview
 
-### Communication Tools
+### Data Operations
+- CSV bulk upload for student onboarding
+- CSV validation, create/update behavior, and failure reporting
 
-- In-app messaging
-- Announcements and notifications
-- Discussion forums
+### AI Placement Predictor
+- Dedicated FastAPI microservice for inference
+- TensorFlow/Keras ANN model + scaler metadata
+- Node backend proxy endpoint: `POST /api/placement/predict`
+- Frontend predictor UI with result insights
 
-### Leave Management
+## Architecture
 
-- Leave request submission
-- Approval workflow
-- Leave history and tracking
+### Web Application
+- Frontend talks to Node backend API
+- Node backend handles auth, business logic, and DB operations
+- Socket.IO provides real-time events for chat/notifications
 
----
+### ML Integration
+- Node backend forwards placement requests to ML service (`ML_SERVICE_URL`)
+- ML service loads model artifacts at startup:
+  - `ml_service/models/placement_ann.keras`
+  - `ml_service/models/scaler.pkl`
 
-## 🛠️ Technologies Used
+## Tech Stack
 
-- **Frontend**: React.js, TailwindCSS
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB
-- **Authentication**: JWT
-- **Deployment**: Docker, AWS
+- Frontend: React 18, Vite, Tailwind CSS, React Router, Axios
+- Backend: Node.js, Express, Mongoose, JWT, Socket.IO
+- ML Service: FastAPI, Uvicorn, TensorFlow/Keras, scikit-learn, pandas, NumPy, mRMR
+- Database: MongoDB (local or Atlas)
+- Deployment: Render (server), Vercel (client)
 
----
+## Repository Structure
 
-## 📋 Prerequisites
+```text
+MMSpace/
+  client/                  # React frontend
+  server/                  # Express backend
+  ml_service/              # FastAPI ML microservice
+    models/                # placement_ann.keras, scaler.pkl
+  dataset/                 # source/synthetic ML data
+  render.yaml              # Render blueprint config
+```
 
-- Node.js (v14 or higher)
-- MongoDB (v4.4 or higher)
-- npm (v6 or higher) or yarn
-
----
-
-## 🚀 Getting Started
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/MMSpace.git
-   cd MMSpace
-   ```
-
-2. **Install dependencies**
-   ```bash
-   # Install server dependencies
-   cd server
-   npm install
-   
-   # Install client dependencies
-   cd ../client
-   npm install
-   ```
-
-3. **Set up environment variables**
-   - Create `.env` files in both `server` and `client` directories
-   - Add required environment variables
-
-4. **Start the application**
-   ```bash
-   # Start server
-   cd server
-   npm run dev
-   
-   # Start client (in a new terminal)
-   cd ../client
-   npm start
-   ```
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-## 📧 Contact
-
-For any queries, please contact [your-email@example.com](mailto:your-email@example.com)
-- **Real-time Chat**: Group and individual messaging with Socket.IO
-- **Leave Management**: Request and approve leaves
-- **Attendance Tracking**: Monitor student attendance
-- **Grievance System**: Submit and track grievances
-- **Announcements**: Broadcast important updates
-- **Analytics Dashboard**: Comprehensive insights for admins
-
-## 🛠️ Tech Stack
-
-### Frontend
-
-- React 18
-- Vite
-- Tailwind CSS
-- Socket.IO Client
-- React Router
-- React Hook Form
-
-### Backend
-
-- Node.js
-- Express
-- MongoDB
-- Socket.IO
-- JWT Authentication
-
-## 📦 Deployment
-
-### Production Deployment
-
-The application is deployed using:
-
-- **Server**: Render (Docker)
-- **Client**: Vercel
-- **Database**: MongoDB Atlas
-
-For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md)
-
-### Quick Deploy
-
-1. **Deploy Server to Render**
-
-   - Push code to GitHub
-   - Create Web Service on Render
-   - Set environment variables
-   - Deploy using Docker
-
-2. **Deploy Client to Vercel**
-   - Connect GitHub repository
-   - Configure build settings
-   - Set `VITE_API_URL` environment variable
-   - Deploy
-
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete instructions.
-
-## 🔧 Local Development
-
-### Prerequisites
+## Prerequisites
 
 - Node.js 18+
-- MongoDB (local or Atlas)
-- npm or yarn
+- npm 8+
+- Python 3.10+ (recommended for TensorFlow compatibility)
+- MongoDB (Atlas or local)
 
-### Setup
+## Local Setup
 
-1. **Clone the repository**
+### 1. Clone and install JavaScript dependencies
 
-   ```bash
-   git clone <repository-url>
-   cd MMSpace
-   ```
+```bash
+git clone <repository-url>
+cd MMSpace
+npm install
+cd server && npm install
+cd ../client && npm install
+cd ..
+```
 
-2. **Install server dependencies**
+### 2. Configure environment variables
 
-   ```bash
-   cd server
-   npm install
-   ```
+Create `server/.env` (or copy from `server/.env.example`) with values like:
 
-3. **Install client dependencies**
+```env
+NODE_ENV=development
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/mmspace
+JWT_SECRET=your-secret-key
+CLIENT_URL=http://localhost:5173
+CORS_ORIGIN=http://localhost:5173
+ML_SERVICE_URL=http://localhost:8000
+```
 
-   ```bash
-   cd ../client
-   npm install
-   ```
+Create `client/.env`:
 
-4. **Configure environment variables**
+```env
+VITE_API_URL=http://localhost:5000
+```
 
-   Server `.env`:
+### 3. Set up ML service
 
-   ```properties
-   NODE_ENV=development
-   PORT=5000
-   MONGODB_URI=mongodb://localhost:27017/mmspace
-   JWT_SECRET=your-secret-key
-   CLIENT_URL=http://localhost:3000
-   CORS_ORIGIN=http://localhost:3000
-   ```
+```bash
+cd ml_service
+python3.10 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install fastapi uvicorn pandas numpy scikit-learn tensorflow mrmr-selection openpyxl xlrd requests
+cd ..
+```
 
-   Client `.env`:
+### 4. Run the app
 
-   ```properties
-   VITE_API_URL=http://localhost:5000
-   ```
+Terminal 1 (ML service):
 
-5. **Run the application**
+```bash
+cd ml_service
+source .venv/bin/activate
+python app.py
+```
 
-   Terminal 1 (Server):
+Terminal 2 (web app: server + client together):
 
-   ```bash
-   cd server
-   npm run dev
-   ```
+```bash
+cd MMSpace
+npm run dev
+```
 
-   Terminal 2 (Client):
+### Local URLs
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:5000`
+- ML service: `http://localhost:8000`
 
-   ```bash
-   cd client
-   npm run dev
-   ```
+## Seeding Demo Data
 
-6. **Access the application**
-   - Client: http://localhost:3000
-   - Server: http://localhost:5000
+The backend includes a seed script with demo users.
 
-## 📚 Documentation
+```bash
+cd server
+npm run seed
+```
 
-- [Deployment Guide](./DEPLOYMENT.md)
-- [Contributing Guidelines](./CONTRIBUTING.md)
-- [Feature Implementation](./FEATURE_IMPLEMENTATION_SUMMARY.md)
+Default demo credentials:
+- Admin: `admin@example.com` / `password123`
+- Mentor: `mentor@example.com` / `password123`
+- Mentee: `mentee@example.com` / `password123`
 
-## 🔐 Security
+## Important Functional Flows
 
-- JWT-based authentication
-- Password hashing with bcrypt
-- CORS configuration
-- Input validation
-- Environment variable protection
+### CSV Bulk Upload (Admin)
+- Endpoint: `POST /api/csv/upload-students`
+- Template: `GET /api/csv/template`
+- Required columns: `rollNo`, `studentEmail`, `studentPhone`
+- Optional: `fullName`, `parentsPhone`, `parentsEmail`, `mentorEmail`, `class`, `section`
 
-## 📝 License
+Default generated password for new student accounts:
+- `{rollNo}@123`
 
-This project is licensed under the MIT License.
+### Grievance Workflow
+- Submit grievance: `POST /api/grievances`
+- Mentee grievances: `GET /api/grievances/mentee`
+- Mentor grievances: `GET /api/grievances/mentor`
+- Admin grievances: `GET /api/grievances/admin`
+- Review/resolve/reject endpoints for mentors/admins
 
-## 🤝 Contributing
+### Mentor Profile Update
+- Endpoint: `PUT /api/mentors/profile`
+- Editable fields include `email`, `phone`, `qualifications`, `citations`
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
+### Placement Prediction
+- Backend endpoint: `POST /api/placement/predict`
+- Required payload fields:
+  - `DSA_Skill`
+  - `GP`
+  - `Internships`
+  - `Active_Backlogs`
+  - `Tenth_Marks`
+  - `Twelfth_Marks`
 
-## 📧 Support
+## Health and Debugging
 
-For support, please open an issue in the GitHub repository.
+- Health check: `GET /api/health`
+- Additional health route: `GET /health`
+- DB connection test:
 
----
+```bash
+cd server
+npm run test-db
+```
 
-**Built with ❤️ by the MMSpace Team**
+## Deployment (Production)
+
+### Recommended Deployment
+- Backend + ML: one Render web service (`deploy/Dockerfile.render`)
+- Client: Vercel
+- Database: MongoDB Atlas
+
+### Server environment variables
+
+```env
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=<mongodb-uri>
+JWT_SECRET=<secure-secret>
+CLIENT_URL=https://your-app.vercel.app
+CORS_ORIGIN=https://your-app.vercel.app
+```
+
+### Client environment variable
+
+```env
+VITE_API_URL=https://your-server.onrender.com
+```
+
+### Deployment Notes
+- On Vercel, set project root directory to `client`
+- Keep Vite rewrite support for SPA routes (`client/vercel.json`)
+- Ensure server CORS values exactly match deployed frontend origin(s)
+- Render deploy uses one web service with `deploy/Dockerfile.render` (Node + ML in one container)
+- `render.yaml` must stay at repository root (Render blueprint discovery)
+- `.dockerignore` should stay at repository root (controls root Docker context for Render build)
+
+## Docker (Local Alternative)
+
+A new user can run MMSpace with Docker on Linux, macOS, and Windows (Docker Desktop + WSL2 recommended on Windows).
+
+### Docker Quick Start
+
+```bash
+git clone <repository-url>
+cd MMSpace/mmspace-docker
+docker compose down --remove-orphans
+docker compose up -d --build
+docker compose ps
+```
+
+Open in browser:
+- `http://localhost:3000`
+
+Useful checks:
+
+```bash
+docker compose logs -f server
+docker compose logs -f ml-service
+curl http://localhost:5001/api/health
+```
+
+Stop containers:
+
+```bash
+docker compose down
+```
+
+Full reset (also triggers first-time seed again):
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+### Auto Seeding on First Init
+
+Docker server startup runs `seed:if-empty`, which executes `scripts/seed.js` only when the database has no users.
+
+### Will File Changes Reflect Immediately?
+
+Not in this Docker setup by default.
+
+- This stack runs production-style containers, so code edits on host do not hot-reload automatically.
+- After code changes, rebuild and restart:
+
+```bash
+cd mmspace-docker
+docker compose up -d --build
+```
+
+For instant hot reload while developing, use the non-Docker local dev flow (`npm run dev` for web app + `python app.py` for ML service).
+
+## Known Issues and Backlog
+
+The previous `issues.md` has been normalized into this list:
+
+### Major
+- Further admin dashboard hardening for complete mentor/mentee lifecycle
+- Ensure mentor assignment remains strictly admin-controlled
+- Attendance UX refinements for group-based detailed views
+- Dashboard card improvements around leave/complaint indicators
+
+### Minor
+- Like/comment consistency edge cases
+- Group deletion modal UX polish
+- Leave cancel flow refinements
+- Batch group operations improvements
+
+## Testing Checklist
+
+- Login/logout for all roles
+- Admin CRUD and mentor assignment flows
+- Group messaging and individual chat behavior
+- Announcement creation and comment updates
+- Leave submission and filtered state views
+- Grievance submission and review lifecycle
+- CSV upload happy path and validation errors
+- Placement prediction end-to-end (`client -> server -> ml_service`)
+
+## Contributing
+
+Please see [CONTRIBUTING.md](./CONTRIBUTING.md).

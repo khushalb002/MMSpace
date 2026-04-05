@@ -1,17 +1,18 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-echo "Deploying MMSpace application..."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Stop existing containers
-docker-compose down
+cd "$PROJECT_DIR"
 
-# Pull latest images and build
-docker-compose build --no-cache
+echo "Deploying MMSpace Docker stack..."
+docker compose down
+docker compose up -d --build
 
-# Start services
-docker-compose up -d
-
-echo "Deployment completed! Application is running at:"
-echo "Frontend: http://localhost:3000"
-echo "Backend: http://localhost:5000"
-echo "MongoDB: mongodb://localhost:27017"
+echo
+echo "Deployment completed:"
+echo "Frontend:   http://localhost:3000"
+echo "Backend:    http://localhost:5001/api/health"
+echo "ML Service: internal only (container: ml-service:8000)"
+echo "MongoDB:    mongodb://admin:password123@localhost:27018/mmspace?authSource=admin"

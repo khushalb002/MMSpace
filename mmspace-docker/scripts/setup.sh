@@ -1,20 +1,17 @@
-# server/Dockerfile
-FROM node:24.9.0
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Set the working directory
-WORKDIR /usr/src/app
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Copy package.json and package-lock.json
-COPY package*.json ./
+cd "$PROJECT_DIR"
 
-# Install dependencies
-RUN npm install
+echo "Starting MMSpace containers (frontend + backend + mongodb + ml-service)..."
+docker compose up -d --build
 
-# Copy the rest of the application code
-COPY . .
-
-# Expose the port the app runs on
-EXPOSE 5000
-
-# Start the application
-CMD ["npm", "start"]
+echo
+echo "MMSpace is up:"
+echo "Frontend:   http://localhost:3000"
+echo "Backend:    http://localhost:5001/api/health"
+echo "ML Service: internal only (container: ml-service:8000)"
+echo "MongoDB:    mongodb://admin:password123@localhost:27018/mmspace?authSource=admin"

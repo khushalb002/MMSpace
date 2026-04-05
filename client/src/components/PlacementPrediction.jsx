@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Sparkles, BrainCircuit, Activity, CheckCircle2, AlertTriangle, AlertCircle, Award, Target, Trophy } from 'lucide-react';
 
 const PlacementPrediction = () => {
@@ -37,7 +37,7 @@ const PlacementPrediction = () => {
                 Twelfth_Marks: parseFloat(formData.Twelfth_Marks)
             };
 
-            const response = await axios.post(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/placement/predict`, payload);
+            const response = await api.post('/placement/predict', payload);
             setResult(response.data);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to fetch prediction.');

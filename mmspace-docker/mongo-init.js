@@ -1,4 +1,4 @@
-# Create application user
+// Create application user
 db = db.getSiblingDB('mmspace');
 
 db.createUser({
@@ -12,7 +12,7 @@ db.createUser({
   ]
 });
 
-# Create initial collections
+// Create initial collections
 db.createCollection('users');
 db.createCollection('mentors');
 db.createCollection('mentees');
@@ -20,5 +20,8 @@ db.createCollection('groups');
 db.createCollection('messages');
 db.createCollection('leaves');
 db.createCollection('announcements');
+db.createCollection('grievances');
+db.createCollection('notifications');
+db.createCollection('attendances');
 
 print('Database initialized successfully');

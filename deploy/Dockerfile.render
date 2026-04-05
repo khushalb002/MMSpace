@@ -1,0 +1,40 @@
+FROM python:3.10-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TF_CPP_MIN_LOG_LEVEL=2
+
+WORKDIR /app
+
+# Install Node.js 20 and Supervisor in the same image.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl gnupg supervisor \
+    && mkdir -p /etc/apt/keyrings \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+    | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" \
+    > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install server dependencies.
+COPY server/package*.json /app/server/
+RUN cd /app/server && npm ci --omit=dev
+
+# Install ML service dependencies.
+COPY ml_service/requirements.txt /app/ml_service/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r /app/ml_service/requirements.txt
+
+# Copy source code for both services.
+COPY server /app/server
+COPY ml_service /app/ml_service
+
+# Supervisor process config for running both services in one container.
+COPY deploy/supervisord.render.conf /etc/supervisord.conf
+
+# Render routes public traffic to this port via the server process.
+EXPOSE 5000
+
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
