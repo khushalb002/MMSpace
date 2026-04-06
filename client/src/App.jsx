@@ -17,6 +17,7 @@ import LeavesPage from './pages/LeavesPage'
 import GrievancePage from './pages/GrievancePage'
 import AttendancePage from './pages/AttendancePage'
 import ProfilePage from './pages/ProfilePage'
+import PlacementPage from './pages/PlacementPage'
 import UserManagementPage from './pages/admin/UserManagementPage'
 import MentorshipPage from './pages/admin/MentorshipPage'
 import AnalyticsPage from './pages/admin/AnalyticsPage'
@@ -152,6 +153,14 @@ function App() {
                                     element={
                                         <ProtectedRoute>
                                             <ProfilePage />
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/placement"
+                                    element={
+                                        <ProtectedRoute>
+                                            <PlacementPage />
                                         </ProtectedRoute>
                                     }
                                 />
