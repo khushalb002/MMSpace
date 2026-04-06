@@ -18,7 +18,8 @@ import {
     Moon,
     Sun,
     BarChart3,
-    Target
+    Target,
+    BrainCircuit
 } from 'lucide-react'
 import LogoIcon from './icons/LogoIcon'
 
@@ -47,6 +48,7 @@ const Layout = ({ children }) => {
     { name: 'Chat', href: '/chat', icon: MessageCircle, roles: ['mentor', 'mentee', 'guardian'] },
         { name: 'Leaves', href: '/leaves', icon: Calendar, roles: ['mentor', 'mentee'] },
     { name: 'Grievances', href: '/grievances', icon: FileText, roles: ['mentor', 'mentee', 'guardian'] },
+        { name: 'Placement', href: '/placement', icon: BrainCircuit, roles: ['mentee'] },
         { name: 'Profile', href: '/profile', icon: User },
     ]
 
